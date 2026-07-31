@@ -62,7 +62,7 @@ export function badgeCounts(input: {
  *  is a read-only projection, not the letters feature's source of truth. */
 export function isLetterOpenable(
   letter: {
-    lock_type: 'anytime' | 'date' | 'mood';
+    lock_type: string; // generated type; runtime values constrained by CHECK
     unlock_at: string | null;
     unlock_mood: string | null;
     opened_at: string | null;
@@ -78,6 +78,8 @@ export function isLetterOpenable(
       return !!letter.unlock_at && new Date(letter.unlock_at) <= now;
     case 'mood':
       return !!letter.unlock_mood && moods.some((m) => m.mood === letter.unlock_mood);
+    default:
+      return false;
   }
 }
 

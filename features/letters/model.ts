@@ -22,6 +22,8 @@ export function isUnlocked(
       return !!letter.unlock_at && new Date(letter.unlock_at) <= now;
     case 'mood':
       return !!letter.unlock_mood && moods.some((m) => m.mood === letter.unlock_mood);
+    default:
+      return false; // generated types widen lock_type to string; CHECK constrains to 3
   }
 }
 
@@ -39,6 +41,8 @@ export function sealedReason(
     }
     case 'mood':
       return `opens when one of us feels ${letter.unlock_mood ?? 'it'}`;
+    default:
+      return 'sealed for later';
   }
 }
 

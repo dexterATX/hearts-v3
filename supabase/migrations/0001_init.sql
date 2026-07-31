@@ -11,18 +11,6 @@ create extension if not exists pgcrypto;   -- gen_random_uuid
 create extension if not exists pg_net;     -- edge-function fan-out from triggers
 create schema if not exists private;
 
--- Recursion-safe membership helper: runs as table owner, bypasses RLS on
--- profiles, so policies on profiles never query profiles directly.
-create or replace function private.my_couple_id()
-returns uuid
-language sql stable security definer
-set search_path = ''
-as $$
-  select couple_id from public.profiles where id = (select auth.uid())
-$$;
-revoke all on function private.my_couple_id() from public, anon;
-grant execute on function private.my_couple_id() to authenticated;
-
 -- ──────────────────────────────────────────────────────────────────────
 -- 1. tables (data contract §3; op_id added to content tables for replay-safe
 --    upserts — the idempotency key the outbox flusher upserts on)
@@ -44,6 +32,20 @@ create table public.profiles (
   last_seen_at timestamptz,
   created_at timestamptz not null default now()
 );
+
+-- Recursion-safe membership helper: runs as table owner, bypasses RLS on
+-- profiles, so policies on profiles never query profiles directly.
+-- MUST be created after profiles exists — SQL-language functions validate
+-- their body's relations at CREATE time (db push finding).
+create or replace function private.my_couple_id()
+returns uuid
+language sql stable security definer
+set search_path = ''
+as $$
+  select couple_id from public.profiles where id = (select auth.uid())
+$$;
+revoke all on function private.my_couple_id() from public, anon;
+grant execute on function private.my_couple_id() to authenticated;
 
 create table public.moods (
   id uuid primary key default gen_random_uuid(),

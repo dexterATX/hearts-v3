@@ -105,7 +105,7 @@ export default function PlayTab() {
               games in progress
             </Text>
             {active.map((s) => (
-              <Pressable key={s.id} onPress={() => router.push(gameHref(s.kind, s.id))}>
+              <Pressable key={s.id} onPress={() => router.push(gameHref(s.kind as GameKind, s.id))}>
                 <Card style={{ marginBottom: spacing.sm, borderColor: colors.rose }}>
                   <Text variant="body">
                     {GAMES.find((g) => g.kind === s.kind)?.emoji} {GAMES.find((g) => g.kind === s.kind)?.title}
