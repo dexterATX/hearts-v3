@@ -23,6 +23,28 @@ export function nextBackoffMs(attempts: number, jitter: () => number = Math.rand
 /** Give up after this many attempts — surfaces as a visible rollback (§2.3.6). */
 export const MAX_ATTEMPTS = 8;
 
+export type SendError = { status?: number; code?: string; message?: string };
+
+/**
+ * Classify a PostgREST/Postgres error the way decide() needs it.
+ * PostgrestError HAS NO `.status` field (P1 finding) — only `code`, `message`,
+ * `details`, `hint`. The HTTP status must be derived from the code:
+ *   23505 unique violation        → 409 (permanent: a real conflict)
+ *   23503 fk violation            → 409 (permanent)
+ *   42501 insufficient privilege  → 403 (RLS — retrying cannot help)
+ *   22xxx data exceptions         → 400 (bad payload — permanent)
+ *   PGRST1xx postgrest errors     → 400 (schema/API misuse — permanent)
+ *   anything else / no code       → no status → treated as transient network
+ */
+export function classifyError(e: { code?: string; message?: string }): SendError {
+  const code = e.code ?? '';
+  if (code === '23505' || code === '23503') return { status: 409, code, message: e.message };
+  if (code === '42501') return { status: 403, code, message: e.message };
+  if (/^22[0-9A-Z]{3}$/.test(code)) return { status: 400, code, message: e.message };
+  if (/^PGRST1\d{2}$/.test(code)) return { status: 400, code, message: e.message };
+  return { code: code || undefined, message: e.message };
+}
+
 export type FlushDecision =
   | { action: 'send' }
   | { action: 'wait'; delayMs: number }
@@ -34,7 +56,7 @@ export type FlushDecision =
  */
 export function decide(
   op: Op,
-  lastError: { status?: number; code?: string; message?: string } | null,
+  lastError: SendError | null,
   now: number,
   lastAttemptAt: number,
   jitter: () => number = Math.random,

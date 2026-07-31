@@ -5,18 +5,18 @@ import { View, ScrollView, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
-import { Text, Card, Button } from '../../../ui';
-import { colors, spacing } from '../../../theme/theme';
-import { useSession } from '../../../lib/session/store';
-import { usePublishPresence } from '../../../features/presence';
+import { Text, Card, Button } from '../../ui';
+import { colors, spacing } from '../../theme/theme';
+import { useSession } from '../../lib/session/store';
+import { usePublishPresence } from '../../features/presence';
 import {
   listActiveSessions,
   useStartHangman,
   useStartBattleship,
   useStartQuiz,
   useStartCards,
-} from '../../../features/games';
-import type { GameKind, GameSessionRow } from '../../../lib/db/database.types';
+} from '../../features/games';
+import type { GameKind, GameSessionRow } from '../../lib/db/database.types';
 
 const GAMES: { kind: GameKind; title: string; blurb: string; emoji: string }[] = [
   { kind: 'hangman', title: 'loves me, loves me not', blurb: 'a word, a daisy, six petals', emoji: '🌼' },

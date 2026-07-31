@@ -38,7 +38,7 @@ export function ranked(rows: readonly BucketItemRow[]): BucketItemRow[] {
 export function pickRandom(rows: readonly BucketItemRow[], rng: () => number = Math.random): BucketItemRow | null {
   const open = openItems(rows);
   if (open.length === 0) return null;
-  return open[Math.floor(rng() * open.length)];
+  return open[Math.floor(rng() * open.length)] ?? null;
 }
 
 export const CATEGORIES = ['us', 'places', 'food', 'adventure', 'home', 'someday'] as const;

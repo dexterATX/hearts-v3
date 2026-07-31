@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { View, Pressable, TextInput, ScrollView } from 'react-native';
 import { Text, Card, Button, Skeleton } from '../../../ui';
 import { colors, spacing, radius } from '../../../theme/theme';
-import { MOODS, moodMeta } from '../../lib/moods';
+import { MOODS, moodMeta } from '../../../lib/moods';
 import { useJournal, useAddEntry, useDeleteEntry } from '../hooks';
 import { groupByDay, excerpt } from '../model';
 import { useSession } from '../../../lib/session/store';

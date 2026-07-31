@@ -4,7 +4,7 @@
 import { fetch } from 'expo/fetch';
 import { supabase } from '../../lib/db/client';
 import { ok, err, toAppError, type Result } from '../../lib/result';
-import { systemPrompt, userPrompt, parseSseDelta, type CompanionMode } from './model';
+import { parseSseDelta, type CompanionMode } from './model';
 
 /** §7.16 monthly recap: build the honest context from this month's shared
  *  activity — counts only, never letter/journal bodies (those are ours). */
@@ -71,10 +71,7 @@ export async function streamCompanion(
         'content-type': 'application/json',
         authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({
-        system: systemPrompt(mode, names),
-        prompt: userPrompt(mode, context),
-      }),
+      body: JSON.stringify({ mode, context, names }),
       signal,
     });
 

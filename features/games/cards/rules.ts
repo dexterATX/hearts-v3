@@ -53,7 +53,9 @@ export function deckFor(levels: readonly CardLevel[]): Card[] {
 
 export function currentCard(s: CardsState): Card | null {
   if (s.phase !== 'playing' || s.drawn.length === 0) return null;
-  return deckFor(s.levels)[s.drawn[s.drawn.length - 1]] ?? null;
+  const idx = s.drawn[s.drawn.length - 1];
+  if (idx === undefined) return null;
+  return deckFor(s.levels)[idx] ?? null;
 }
 
 export function cardsLeft(s: CardsState): number {
@@ -76,6 +78,7 @@ export const cardsRules: GameRules<CardsState, CardsMove> = {
         if (state.lastDrawBy === by) return state; // strictly alternating
         if (state.index >= state.order.length) return { ...state, phase: 'done' };
         const deckIdx = state.order[state.index];
+        if (deckIdx === undefined) return { ...state, phase: 'done' };
         const drawn = move.k === 'draw' ? [...state.drawn, deckIdx] : state.drawn;
         const index = state.index + 1;
         const phase = index >= state.order.length && move.k === 'skip' ? ('done' as const) : state.phase;

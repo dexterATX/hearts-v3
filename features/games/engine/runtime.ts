@@ -35,8 +35,8 @@ function rowToEnvelope<M>(r: GameMoveRow): MoveEnvelope<M> {
 function newOpId(): string {
   const bytes = new Uint8Array(16);
   crypto.getRandomValues(bytes);
-  bytes[6] = (bytes[6] & 0x0f) | 0x40;
-  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  bytes[6] = ((bytes[6] ?? 0) & 0x0f) | 0x40;
+  bytes[8] = ((bytes[8] ?? 0) & 0x3f) | 0x80;
   const hex = [...bytes].map((b) => b.toString(16).padStart(2, '0'));
   return `${hex.slice(0, 4).join('')}-${hex.slice(4, 6).join('')}-${hex.slice(6, 8).join('')}-${hex.slice(8, 10).join('')}-${hex.slice(10, 16).join('')}`;
 }
@@ -70,7 +70,7 @@ export function useGame<S, M>(
       if (cancelled) return;
       if (res.ok) {
         const rows = res.data.map(rowToEnvelope<M>);
-        buffer.current = new SeqBuffer<M>(rows.length ? rows[rows.length - 1].seq : 0);
+        buffer.current = new SeqBuffer<M>((rows[rows.length - 1]?.seq ?? 0));
         issuedRef.current = buffer.current.lastSeq;
         setEnvelopes(rows);
         setError(null);
@@ -171,7 +171,7 @@ export function useGame<S, M>(
         const fresh = await fetchMoves(sessionId);
         if (fresh.ok) {
           const rows = fresh.data.map(rowToEnvelope<M>);
-          buffer.current = new SeqBuffer<M>(rows.length ? rows[rows.length - 1].seq : 0);
+          buffer.current = new SeqBuffer<M>((rows[rows.length - 1]?.seq ?? 0));
           issuedRef.current = buffer.current.lastSeq;
           setEnvelopes(rows);
         }

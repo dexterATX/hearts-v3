@@ -8,13 +8,17 @@ export function photosInAlbum(photos: readonly PhotoRow[], albumId: string | nul
     .sort((a, b) => (b.taken_at ?? b.created_at).localeCompare(a.taken_at ?? a.created_at));
 }
 
-/** "On this day" (§7.11): photos taken this month-day in any earlier year. */
+/** "On this day" (§7.11): photos taken this month-day in any earlier year.
+ *  LOCAL month/day on both sides — ISO string slices are UTC and shift the
+ *  calendar day for half the planet (P1). */
 export function onThisDay(photos: readonly PhotoRow[], now = new Date()): PhotoRow[] {
-  const mmdd = now.toISOString().slice(5, 10);
+  const month = now.getMonth();
+  const day = now.getDate();
   const thisYear = now.getFullYear();
   return photos.filter((p) => {
-    const at = p.taken_at ?? p.created_at;
-    return at.slice(5, 10) === mmdd && new Date(at).getFullYear() < thisYear;
+    const at = new Date(p.taken_at ?? p.created_at);
+    if (Number.isNaN(at.getTime())) return false;
+    return at.getMonth() === month && at.getDate() === day && at.getFullYear() < thisYear;
   });
 }
 

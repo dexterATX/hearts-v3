@@ -14,6 +14,7 @@ import {
   decide,
   orderForFlush,
   MAX_ATTEMPTS,
+  classifyError,
   type Op,
   type OpKind,
 } from './outboxCore';
@@ -59,8 +60,8 @@ function newOpId(): string {
   // uuid v4 — crypto.getRandomValues is global in Hermes (Expo SDK 50+)
   const bytes = new Uint8Array(16);
   crypto.getRandomValues(bytes);
-  bytes[6] = (bytes[6] & 0x0f) | 0x40;
-  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  bytes[6] = ((bytes[6] ?? 0) & 0x0f) | 0x40;
+  bytes[8] = ((bytes[8] ?? 0) & 0x3f) | 0x80;
   const hex = [...bytes].map((b) => b.toString(16).padStart(2, '0'));
   return `${hex.slice(0, 4).join('')}-${hex.slice(4, 6).join('')}-${hex
     .slice(6, 8)
@@ -116,7 +117,7 @@ type SendResult = { ok: true } | { ok: false; status?: number; code?: string; me
 async function send(op: Op): Promise<SendResult> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- table name is dynamic by design
   const from = supabase.from(op.table as any);
-  let res: { error: { status?: number; code?: string; message?: string } | null };
+  let res: { error: { code?: string; message?: string } | null };
   if (op.kind === 'upsert') {
     res = await from.upsert(op.payload, { onConflict: 'op_id', ignoreDuplicates: true });
   } else if (op.kind === 'update') {
@@ -127,11 +128,14 @@ async function send(op: Op): Promise<SendResult> {
     res = await from.delete().eq('id', id as string);
   }
   if (res.error) {
+    // PostgrestError has NO .status — derive the HTTP class from the code
+    // (P1 finding); transient/network errors carry no status and back off
+    const classified = classifyError(res.error);
     return {
       ok: false,
-      status: res.error.status,
-      code: res.error.code,
-      message: res.error.message ?? 'send failed',
+      status: classified.status,
+      code: classified.code,
+      message: classified.message ?? 'send failed',
     };
   }
   return { ok: true };

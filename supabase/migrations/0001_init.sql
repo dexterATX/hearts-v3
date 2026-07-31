@@ -202,15 +202,8 @@ create table public.notification_prefs (
   prefs jsonb not null default '{}'
 );
 
--- server-side op log: the flusher inserts here first (ignoreDuplicates);
--- only a winning insert applies the payload → replay is a no-op.
-create table public.outbox_ops (
-  op_id uuid primary key,
-  couple_id uuid not null references public.couples on delete cascade,
-  kind text not null,
-  payload jsonb not null,
-  created_at timestamptz not null default now()
-);
+-- (the server-side op log table was retired in 0005 — idempotency lives on
+--  the content tables' unique op_id columns, no central log needed)
 
 -- ──────────────────────────────────────────────────────────────────────
 -- 2. indexes — every couple_id + (couple_id, created_at desc) per contract
@@ -229,7 +222,6 @@ create index quiz_questions_couple on public.quiz_questions (couple_id, created_
 create index bucket_list_couple on public.bucket_list (couple_id, created_at desc);
 create index events_couple on public.events (couple_id, date);
 create index journal_entries_couple on public.journal_entries (couple_id, created_at desc);
-create index outbox_ops_couple on public.outbox_ops (couple_id, created_at desc);
 
 -- ──────────────────────────────────────────────────────────────────────
 -- 3. new-user bootstrap
@@ -382,7 +374,6 @@ alter table public.bucket_list enable row level security;
 alter table public.events enable row level security;
 alter table public.journal_entries enable row level security;
 alter table public.notification_prefs enable row level security;
-alter table public.outbox_ops enable row level security;
 
 -- couples: members read; anniversary etc. updatable by members; inserts via RPC only
 create policy "couple read" on public.couples for select to authenticated
@@ -521,12 +512,6 @@ create policy "prefs own read" on public.notification_prefs for select to authen
 create policy "prefs own update" on public.notification_prefs for update to authenticated
   using (profile_id = (select auth.uid()))
   with check (profile_id = (select auth.uid()));
-
--- server op log: couple can read (reconcile), author (via couple) appends
-create policy "ops couple read" on public.outbox_ops for select to authenticated
-  using (couple_id = (select private.my_couple_id()));
-create policy "ops member write" on public.outbox_ops for insert to authenticated
-  with check (couple_id = (select private.my_couple_id()));
 
 -- ──────────────────────────────────────────────────────────────────────
 -- 7. storage buckets — path segment 1 is always the couple_id

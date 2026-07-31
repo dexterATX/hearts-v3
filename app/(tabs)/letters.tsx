@@ -3,8 +3,8 @@
 import { View, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { Text, Button, Card, Skeleton } from '../../../ui';
-import { colors, spacing } from '../../../theme/theme';
+import { Text, Button, Card, Skeleton } from '../../ui';
+import { colors, spacing } from '../../theme/theme';
 import {
   LetterCard,
   sealed,
@@ -12,10 +12,10 @@ import {
   useLetters,
   useLetterSync,
   useLetterUnlocked,
-} from '../../../features/letters';
-import { usePublishPresence } from '../../../features/presence';
-import { useSession } from '../../../lib/session/store';
-import type { LetterRow } from '../../../lib/db/database.types';
+} from '../../features/letters';
+import { usePublishPresence } from '../../features/presence';
+import { useSession } from '../../lib/session/store';
+import type { LetterRow } from '../../lib/db/database.types';
 
 function LetterEntry({ letter, mine }: { letter: LetterRow; mine: boolean }) {
   const unlocked = useLetterUnlocked(letter);

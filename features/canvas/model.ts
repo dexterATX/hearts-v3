@@ -18,8 +18,9 @@ export function simplify(points: readonly Point[], minDist = 3): Point[] {
     const last = out[out.length - 1];
     if (!last || Math.hypot(p.x - last.x, p.y - last.y) >= minDist) out.push(p);
   }
-  if (points.length > 0 && out[out.length - 1] !== points[points.length - 1]) {
-    out.push(points[points.length - 1]);
+  const lastInput = points[points.length - 1];
+  if (lastInput && out[out.length - 1] !== lastInput) {
+    out.push(lastInput);
   }
   return out;
 }

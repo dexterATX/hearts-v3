@@ -3,17 +3,17 @@
 import { View, ScrollView } from 'react-native';
 import { useState } from 'react';
 import { useLocalSearchParams } from 'expo-router';
-import { Text, Skeleton } from '../../../ui';
-import { colors, spacing } from '../../../theme/theme';
+import { Text, Skeleton } from '../../ui';
+import { colors, spacing } from '../../theme/theme';
 import {
   WaxSeal,
   useLetters,
   useOpenLetter,
   useLetterUnlocked,
-} from '../../../features/letters';
-import { usePublishPresence } from '../../../features/presence';
-import { useSession } from '../../../lib/session/store';
-import type { LetterRow } from '../../../lib/db/database.types';
+} from '../../features/letters';
+import { usePublishPresence } from '../../features/presence';
+import { useSession } from '../../lib/session/store';
+import type { LetterRow } from '../../lib/db/database.types';
 
 export default function LetterRoute() {
   usePublishPresence('letters');

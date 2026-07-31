@@ -1,9 +1,25 @@
 // features/home/model.ts — pure home logic. No RN imports. No feature imports.
+
+/** Parse 'YYYY-MM-DD' as a LOCAL date — `new Date(s)` would treat it as UTC
+ *  midnight, shifting the day in every timezone west of Greenwich (P1). */
+export function parseLocalDate(iso: string): Date | null {
+  const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!m) return null;
+  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function startOfLocalDay(d: Date): Date {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
 export function daysTogether(anniversaryIso: string | null, now = new Date()): number | null {
   if (!anniversaryIso) return null;
-  const start = new Date(anniversaryIso);
-  if (Number.isNaN(start.getTime())) return null;
-  const days = Math.floor((now.getTime() - start.getTime()) / 86_400_000);
+  const start = parseLocalDate(anniversaryIso);
+  if (!start) return null;
+  const days = Math.floor(
+    (startOfLocalDay(now).getTime() - startOfLocalDay(start).getTime()) / 86_400_000,
+  );
   return days >= 0 ? days : null;
 }
 

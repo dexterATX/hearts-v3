@@ -3,15 +3,15 @@
 import { useState } from 'react';
 import { View, Pressable, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Text } from '../../../ui';
-import { colors, spacing, radius } from '../../../theme/theme';
-import { usePublishPresence } from '../../../features/presence';
-import { PhotoGrid, AlbumsRail, usePhotoSync, useAddPhoto, useAddAlbum } from '../../../features/photos';
-import { VoiceList, useVoiceSync } from '../../../features/voice';
-import { JournalList, useJournalSync } from '../../../features/journal';
-import { BucketListView, useBucketSync } from '../../../features/bucket';
-import { EventsView, useEventSync, useEventReminders } from '../../../features/events';
-import { CompanionScreen } from '../../../features/ai';
+import { Text } from '../../ui';
+import { colors, spacing, radius } from '../../theme/theme';
+import { usePublishPresence } from '../../features/presence';
+import { PhotoGrid, AlbumsRail, usePhotoSync, useAddPhoto, useAddAlbum } from '../../features/photos';
+import { VoiceList, useVoiceSync } from '../../features/voice';
+import { JournalList, useJournalSync } from '../../features/journal';
+import { BucketListView, useBucketSync } from '../../features/bucket';
+import { EventsView, useEventSync, useEventReminders } from '../../features/events';
+import { CompanionScreen } from '../../features/ai';
 
 const SECTIONS = [
   { key: 'photos', label: '📷 photos' },

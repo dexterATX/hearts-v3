@@ -21,7 +21,7 @@ describe('quiz rules', () => {
   });
 
   it('the author never answers their own question', () => {
-    expect(answererFor(QUESTIONS[0], [A, B])).toBe(B);
+    expect(answererFor(QUESTIONS[0]!, [A, B])).toBe(B);
     const s = fold(quizRules, 'seed', [
       { seq: 1, authorId: A, payload: begin },
       { seq: 2, authorId: A, payload: { k: 'answer' as const, questionId: 'q1', choiceIndex: 1 } },

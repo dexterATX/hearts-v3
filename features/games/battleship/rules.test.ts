@@ -121,8 +121,10 @@ describe('secrecy helpers (owner device only)', () => {
     expect(resolveShot(layoutA, 4, 4)).toBe('miss');
   });
   it('isSunk needs every cell', () => {
-    expect(isSunk(layoutA[3], [{ x: 0, y: 7 }])).toBe(false);
-    expect(isSunk(layoutA[3], [{ x: 0, y: 7 }, { x: 1, y: 7 }])).toBe(true);
+    const last = layoutA[3];
+    expect(last).toBeDefined();
+    expect(isSunk(last!, [{ x: 0, y: 7 }])).toBe(false);
+    expect(isSunk(last!, [{ x: 0, y: 7 }, { x: 1, y: 7 }])).toBe(true);
   });
 });
 

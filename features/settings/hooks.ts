@@ -45,10 +45,10 @@ export function useTogglePref() {
       if (!userId) return;
       const current = queryClient.getQueryData<NotificationPrefsRow | null>([...PREFS_KEY, userId]) ?? null;
       const prefs = withPref(current, key, on);
-      queryClient.setQueryData<NotificationPrefsRow | null>([...PREFS_KEY, userId], {
-        profile_id: userId,
-        prefs,
-      });
+      queryClient.setQueryData<NotificationPrefsRow | null>(
+        [...PREFS_KEY, userId],
+        (): NotificationPrefsRow => ({ profile_id: userId, prefs }),
+      );
       await savePrefs(userId, prefs);
     },
     [userId, queryClient],

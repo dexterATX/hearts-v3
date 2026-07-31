@@ -61,13 +61,13 @@ export function useQuiz(sessionId: string | null) {
       const interleaved: QuizQuestion[] = [];
       const maxLen = Math.max(mine.length, hers.length);
       for (let i = 0; i < maxLen && interleaved.length < n; i++) {
-        if (mine[i]) {
-          const q = mine[i];
-          interleaved.push({ id: q.id, authorId: q.author_id, prompt: q.prompt, options: q.options as string[], answerIndex: q.answer_index });
+        const qm = mine[i];
+        if (qm) {
+          interleaved.push({ id: qm.id, authorId: qm.author_id, prompt: qm.prompt, options: qm.options as string[], answerIndex: qm.answer_index });
         }
-        if (hers[i] && interleaved.length < n) {
-          const q = hers[i];
-          interleaved.push({ id: q.id, authorId: q.author_id, prompt: q.prompt, options: q.options as string[], answerIndex: q.answer_index });
+        const qh = hers[i];
+        if (qh && interleaved.length < n) {
+          interleaved.push({ id: qh.id, authorId: qh.author_id, prompt: qh.prompt, options: qh.options as string[], answerIndex: qh.answer_index });
         }
       }
       if (interleaved.length === 0) return false;

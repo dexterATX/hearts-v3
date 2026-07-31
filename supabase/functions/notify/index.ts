@@ -66,7 +66,30 @@ Deno.serve(async (req) => {
     return new Response('unauthorized', { status: 401 });
   }
 
-  const payload = (await req.json()) as Payload;
+  // P2: validate the payload before touching anything — a trigger bug or a
+  // crafted request must not fan pushes out to strangers
+  let payload: Payload;
+  try {
+    payload = (await req.json()) as Payload;
+  } catch {
+    return new Response('bad json', { status: 400 });
+  }
+  const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (
+    !payload ||
+    typeof payload.table !== 'string' ||
+    !(payload.table in TITLES) ||
+    typeof payload.couple_id !== 'string' ||
+    !UUID.test(payload.couple_id) ||
+    typeof payload.author_id !== 'string' ||
+    !UUID.test(payload.author_id) ||
+    typeof payload.row !== 'object' ||
+    payload.row === null ||
+    JSON.stringify(payload.row).length > 64_000
+  ) {
+    return new Response('invalid payload', { status: 400 });
+  }
+
   const admin = createClient(SUPABASE_URL, SERVICE_KEY);
 
   // who is the OTHER person in this couple?

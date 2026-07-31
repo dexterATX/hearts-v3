@@ -30,7 +30,7 @@ export function waveBars(seed: string, count = 24): number[] {
 export const SPEEDS = [1, 1.5, 2] as const;
 export function nextSpeed(current: number): number {
   const i = SPEEDS.indexOf(current as (typeof SPEEDS)[number]);
-  return SPEEDS[(i + 1) % SPEEDS.length];
+  return SPEEDS[(i + 1) % SPEEDS.length] ?? 1;
 }
 
 export function storagePathFor(coupleId: string, noteId: string): string {

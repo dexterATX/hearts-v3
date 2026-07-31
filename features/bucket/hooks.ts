@@ -6,7 +6,7 @@ import { useSession } from '../../lib/session/store';
 import { enqueue } from '../../lib/sync/outbox';
 import { emit, on } from '../../lib/sync/bus';
 import { supabase } from '../../lib/db/client';
-import { fetchBucketList } from './api';
+import { fetchBucketList, bucketVote } from './api';
 import { withVote } from './model';
 import { newUuid } from '../../lib/id';
 import type { BucketItemRow } from '../../lib/db/database.types';
@@ -89,15 +89,20 @@ export function useBucketActions() {
       await Haptics.selectionAsync();
       const next = withVote(item, userId, onVote);
       patch(item.id, (old) => old.map((r) => (r.id === item.id ? next : r)));
-      await enqueue({
-        coupleId,
-        kind: 'update',
-        table: 'bucket_list',
-        payload: { id: item.id, votes: next.votes },
-      });
+      // votes go through the merge RPC, NOT the outbox: an outbox update
+      // REPLACES the whole votes object — two phones voting at once would
+      // lose one vote to last-write-wins (P1). The RPC merges with jsonb ||.
+      const res = await bucketVote(item.id, onVote);
+      if (!res.ok) {
+        // visible rollback + honest retry path on next sync
+        patch(item.id, (old) => old.map((r) => (r.id === item.id ? item : r)));
+        void queryClient.invalidateQueries({ queryKey: [...KEY, coupleId] });
+        return false;
+      }
       emit({ t: 'bucket:changed', itemId: item.id });
+      return true;
     },
-    [coupleId, userId, patch],
+    [coupleId, userId, patch, queryClient],
   );
 
   /** Done-with-photo (§7.14): the photo id rides the update. */

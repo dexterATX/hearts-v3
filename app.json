@@ -19,7 +19,6 @@
     "android": {
       "package": "love.scotty.hearts",
       "predictiveBackGestureEnabled": true,
-      "edgeToEdgeEnabled": true,
       "permissions": [
         "POST_NOTIFICATIONS",
         "RECORD_AUDIO",
@@ -28,7 +27,7 @@
       "adaptiveIcon": {
         "backgroundColor": "#0F0A12"
       },
-      "allowBackup": true
+      "allowBackup": false
     },
     "plugins": [
       "expo-router",
@@ -55,7 +54,8 @@
         }
       ],
       "expo-font",
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-asset"
     ],
     "experiments": {
       "typedRoutes": true,

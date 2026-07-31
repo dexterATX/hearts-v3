@@ -178,13 +178,6 @@ export type NotificationPrefsRow = {
   profile_id: string;
   prefs: Json;
 };
-export type OutboxOpRow = {
-  op_id: string;
-  couple_id: string;
-  kind: string;
-  payload: Json;
-  created_at: string;
-};
 
 // ── Database ───────────────────────────────────────────────────────────
 export type Database = {
@@ -206,12 +199,12 @@ export type Database = {
       events: Table<EventRow>;
       journal_entries: Table<JournalEntryRow>;
       notification_prefs: Table<NotificationPrefsRow>;
-      outbox_ops: Table<OutboxOpRow>;
     };
     Views: Record<string, never>;
     Functions: {
       create_couple: { Args: { p_invite_code: string; p_display_name?: string }; Returns: string };
       join_couple: { Args: { p_invite_code: string }; Returns: string };
+      bucket_vote: { Args: { p_item_id: string; p_on: boolean }; Returns: undefined };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;

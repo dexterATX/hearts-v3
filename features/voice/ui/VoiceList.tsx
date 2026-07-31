@@ -1,6 +1,6 @@
 // features/voice/ui/VoiceList.tsx — record, waveform, speed, unheard badge.
 import { useState } from 'react';
-import { View, Pressable } from 'react-native';
+import { View, Pressable, ScrollView } from 'react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring, withRepeat, withTiming } from 'react-native-reanimated';
 import { Text, Card, Skeleton } from '../../../ui';
 import { colors, spacing, radius, motion } from '../../../theme/theme';
@@ -120,24 +120,27 @@ export function VoiceList() {
   const unheard = unheardFor(rows, myId);
 
   return (
-    <View style={{ flex: 1, padding: spacing.lg }}>
+    <View style={{ flex: 1 }}>
       {unheard.length > 0 ? (
-        <Text variant="caption" color={colors.rose} style={{ textAlign: 'center', marginBottom: spacing.md }}>
+        <Text variant="caption" color={colors.rose} style={{ textAlign: 'center', marginBottom: spacing.md, marginTop: spacing.lg }}>
           {unheard.length === 1 ? 'one voice note you haven’t heard' : `${unheard.length} voice notes you haven’t heard`}
         </Text>
       ) : null}
 
-      {rows.length === 0 ? (
-        <Card style={{ marginBottom: spacing.xl }}>
-          <Text variant="small" color={colors.muted}>
-            no voice notes yet — hold the heart and tell her something only her ears get.
-          </Text>
-        </Card>
-      ) : (
-        rows.map((n) => <NoteRow key={n.id} note={n} myId={myId} />)
-      )}
+      {/* the list scrolls (P1 fix) — the record heart stays pinned below */}
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: spacing.lg }}>
+        {rows.length === 0 ? (
+          <Card style={{ marginBottom: spacing.xl }}>
+            <Text variant="small" color={colors.muted}>
+              no voice notes yet — hold the heart and tell her something only her ears get.
+            </Text>
+          </Card>
+        ) : (
+          rows.map((n) => <NoteRow key={n.id} note={n} myId={myId} />)
+        )}
+      </ScrollView>
 
-      <View style={{ alignItems: 'center', marginTop: spacing.xl }}>
+      <View style={{ alignItems: 'center', paddingVertical: spacing.lg }}>
         <Animated.View style={pulseStyle}>
           <Pressable
             accessibilityRole="button"

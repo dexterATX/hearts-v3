@@ -14,7 +14,11 @@ export function shuffledOrder(length: number, rng: () => number = Math.random): 
   const arr = Array.from({ length }, (_, i) => i);
   for (let i = arr.length - 1; i > 0; i--) {
     const j = Math.floor(rng() * (i + 1));
-    [arr[i], arr[j]] = [arr[j], arr[i]];
+    const a = arr[i];
+    const b = arr[j];
+    if (a === undefined || b === undefined) continue;
+    arr[i] = b;
+    arr[j] = a;
   }
   return arr;
 }

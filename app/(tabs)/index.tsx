@@ -4,11 +4,11 @@
 // a FlashList nested in a ScrollView breaks virtualization (round-4 finding).
 import { View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { spacing } from '../../../theme/theme';
-import { useSession } from '../../../lib/session/store';
-import { DaysTogether, FeedList, OutboxBanner, useCouple, useFeed, useHomeSync } from '../../../features/home';
-import { MoodCard, MoodChips, MoodHistory, useMoods, useMoodSync, useSendMood } from '../../../features/mood';
-import { PresenceChip, usePublishPresence } from '../../../features/presence';
+import { spacing } from '../../theme/theme';
+import { useSession } from '../../lib/session/store';
+import { DaysTogether, FeedList, OutboxBanner, useCouple, useFeed, useHomeSync } from '../../features/home';
+import { MoodCard, MoodChips, MoodHistory, useMoods, useMoodSync, useSendMood } from '../../features/mood';
+import { PresenceChip, usePublishPresence } from '../../features/presence';
 
 export default function HomeTab() {
   usePublishPresence('index');

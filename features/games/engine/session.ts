@@ -8,7 +8,7 @@
 // and roll back VISIBLY on failure. Content writes keep the outbox (§2.3).
 import { supabase } from '../../../lib/db/client';
 import { ok, err, toAppError, type Result } from '../../../lib/result';
-import type { GameKind, GameMoveRow, GameSessionRow } from '../../../lib/db/database.types';
+import type { GameKind, GameMoveRow, GameSessionRow, Json } from '../../../lib/db/database.types';
 
 export async function createSession(
   coupleId: string,
@@ -19,7 +19,7 @@ export async function createSession(
   try {
     const res = await supabase
       .from('game_sessions')
-      .insert({ couple_id: coupleId, kind, turn_user_id: firstTurn, state: initialState as Record<string, unknown> })
+      .insert({ couple_id: coupleId, kind, turn_user_id: firstTurn, state: initialState as Json })
       .select()
       .single();
     if (res.error) return err(toAppError(res.error, 'could not start the game'));
@@ -89,7 +89,7 @@ export async function appendMove(
   try {
     const res = await supabase
       .from('game_moves')
-      .insert({ session_id: sessionId, author_id: authorId, seq, payload: payload as Record<string, unknown>, op_id: opId })
+      .insert({ session_id: sessionId, author_id: authorId, seq, payload: payload as Json, op_id: opId })
       .select()
       .single();
     if (res.error) {

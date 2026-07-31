@@ -55,7 +55,10 @@ export function validateLayout(layout: FleetLayout): { ok: true } | { ok: false;
     if (xs.size > 1 && ys.size > 1) return { ok: false, reason: 'hearts lie straight, not diagonal' };
     const sorted = [...p.cells].sort((a, b) => a.x - b.x || a.y - b.y);
     for (let i = 1; i < sorted.length; i++) {
-      const d = Math.abs(sorted[i].x - sorted[i - 1].x) + Math.abs(sorted[i].y - sorted[i - 1].y);
+      const cur = sorted[i];
+      const prev = sorted[i - 1];
+      if (!cur || !prev) continue;
+      const d = Math.abs(cur.x - prev.x) + Math.abs(cur.y - prev.y);
       if (d !== 1) return { ok: false, reason: 'each heart is one unbroken line' };
     }
     for (const c of p.cells) {
@@ -103,7 +106,13 @@ export const battleshipRules: GameRules<BattleshipState, BattleshipMove> = {
         const committed = [...state.committed, by];
         if (committed.length < 2) return { ...state, committed };
         // both fleets hidden → the first to commit fires first (deterministic)
-        return { ...state, committed, phase: 'firing', turn: committed[0], firstShooter: committed[0] };
+        return {
+          ...state,
+          committed,
+          phase: 'firing',
+          turn: committed[0] ?? null,
+          firstShooter: committed[0] ?? null,
+        };
       }
       case 'shot': {
         if (state.phase !== 'firing' || state.pendingShot) return state;
