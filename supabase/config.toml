@@ -1,0 +1,14 @@
+# hearts v3 — Supabase project config
+project_id = "hearts"
+
+# The notify fan-out is called by Postgres triggers via pg_net with the
+# HEARTS_NOTIFY_SECRET header — NOT with a user JWT. With verify_jwt=true
+# (the default) the gateway rejects every trigger call with 401 before the
+# function ever runs (context review finding). The shared secret is the auth.
+[functions.notify]
+verify_jwt = false
+
+# The AI companion is called from the app with the user's JWT — keep the
+# gateway check ON for it.
+[functions.ai-companion]
+verify_jwt = true

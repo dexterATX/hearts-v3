@@ -1,0 +1,70 @@
+{
+  "expo": {
+    "name": "hearts",
+    "slug": "hearts",
+    "version": "3.0.0",
+    "orientation": "portrait",
+    "scheme": "hearts",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#0F0A12",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "love.scotty.hearts",
+      "infoPlist": {
+        "NSFaceIDUsageDescription": "unlock hearts — it is just for you two",
+        "NSMicrophoneUsageDescription": "record voice notes for her",
+        "NSPhotoLibraryUsageDescription": "add photos to your shared albums"
+      }
+    },
+    "android": {
+      "package": "love.scotty.hearts",
+      "predictiveBackGestureEnabled": true,
+      "edgeToEdgeEnabled": true,
+      "permissions": [
+        "POST_NOTIFICATIONS",
+        "RECORD_AUDIO",
+        "VIBRATE"
+      ],
+      "adaptiveIcon": {
+        "backgroundColor": "#0F0A12"
+      },
+      "allowBackup": true
+    },
+    "plugins": [
+      "expo-router",
+      "expo-sqlite",
+      "expo-secure-store",
+      "expo-local-authentication",
+      [
+        "expo-notifications",
+        {
+          "color": "#FF6B8A",
+          "defaultChannel": "hearts"
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "add photos to your shared albums"
+        }
+      ],
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "record voice notes for her"
+        }
+      ],
+      "expo-font",
+      "expo-web-browser"
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "00000000-0000-0000-0000-000000000000"
+      }
+    }
+  }
+}
