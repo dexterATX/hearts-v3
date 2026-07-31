@@ -40,6 +40,7 @@
     "expo-secure-store": "~57.0.1",
     "expo-sqlite": "~57.0.1",
     "expo-status-bar": "~57.0.1",
+    "expo-system-ui": "~57.0.2",
     "expo-video": "~57.0.2",
     "expo-web-browser": "~57.0.2",
     "react": "19.2.3",
@@ -56,6 +57,7 @@
   "devDependencies": {
     "@types/react": "~19.2.0",
     "babel-preset-expo": "~57.0.5",
+    "eas-cli": "^21.4.0",
     "supabase": "^2.110.0",
     "typescript": "~6.0.3",
     "vitest": "^3.2.7"
