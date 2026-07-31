@@ -88,6 +88,34 @@ FINAL SWARM VERIFICATION (4 read-only agents, whole tree) — 11 found, 11 fixed
 VERIFIERS AT CLOSE: vitest 7/52 PASS · route imports OK · index re-exports OK ·
 tsc strict on pure subset PASS (module-resolution noise excluded).
 
+OPERATION "BUILD IT FOR REAL" (2026-07-31, order of operations executed):
+- REPO: 4 worktree shells pruned (2 non-empty under Desktop/hibees left
+  untouched), ~/.git relocated to ~/.git-accidental-home-repo-backup,
+  hearts-v3/.claude metadata removed, fresh repo init. Commits: 6fe812f
+  baseline, 29b8907 make-it-build.
+- IMPORTS: the route files' relative imports were one `../` too deep
+  (the "48 imports" — resolution landed in /home/pop-os). Fixed mechanically;
+  verified by strict tsc against installed types.
+- TYPECHECK: npx tsc --noEmit CLEAN project-wide (strict +
+  noUncheckedIndexedAccess): uuid byte guards, index-access guards in
+  rules/engine/hooks, Json casts in session.ts, journal moods import depth,
+  setQueryData updater form, auth group import depth corrected.
+- P1: outbox classifyError derives HTTP class from Postgres codes (22P02
+  regex bug caught by test) + real-shape tests · VoiceList scrolls, record
+  heart pinned · daysTogether/onThisDay LOCAL-date math + tests · bucket
+  votes merge server-side via 0004 bucket_vote RPC (no more LWW on the jsonb
+  blob) · app lock confirmed root-mounted above the Stack.
+- P2: AI system prompt is server-owned + 3s/user throttle (client sends
+  {mode, context, names}) · notify payload validation (table allowlist, uuid
+  checks, 64KB cap) · outbox_ops retired (0001 cleaned + 0005 drops; types
+  removed) · allowBackup=false.
+- BUILD: babel-preset-expo hoisted, expo-linking + expo-asset installed,
+  expo install --fix aligned flash-list 2.0.2/reanimated 4.5.1/svg 15.15.4,
+  edgeToEdgeEnabled removed from app.json (invalid schema field).
+FINAL VERIFIERS: expo-doctor 20/20 PASS · vitest 67/67 PASS (9 files) ·
+npx tsc --noEmit CLEAN · `expo export --platform android` BUNDLES (2077
+modules). expo start boots and the Android JS bundle builds end-to-end.
+
 CONTEXT REVIEW (same day, from fully loaded context — no re-read): 4 found, 4 fixed —
 1. notify edge function would 401 at the gateway on EVERY trigger call:
    verify_jwt defaults true but pg_net sends no JWT. supabase/config.toml now
