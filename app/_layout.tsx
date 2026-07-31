@@ -7,13 +7,18 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
+import * as Crypto from 'expo-crypto';
 import { colors } from '../theme/theme';
 import { useSession } from '../lib/session/store';
+import { setUuidRng } from '../lib/id';
 import { startReconcile } from '../lib/sync/reconcile';
 import { registerForPush, addPushResponseListener } from '../lib/notify/register';
 import { useAuthBootstrap } from '../features/auth';
 import { LockScreen } from '../features/settings';
 import { router } from 'expo-router';
+
+// Hermes has no global crypto — inject expo-crypto's CSPRNG for all uuids
+setUuidRng((bytes) => Crypto.getRandomValues(bytes));
 
 const queryClient = new QueryClient({
   defaultOptions: {

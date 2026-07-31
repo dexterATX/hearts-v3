@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSession } from '../../../lib/session/store';
 import { emit, on } from '../../../lib/sync/bus';
 import { supabase } from '../../../lib/db/client';
+import { newUuid as newOpId } from '../../../lib/id';
 import { SeqBuffer } from './buffer';
 import { fold, canMove } from './fold';
 import {
@@ -30,15 +31,6 @@ export type GameRuntime<S, M> = {
 
 function rowToEnvelope<M>(r: GameMoveRow): MoveEnvelope<M> {
   return { seq: r.seq, authorId: r.author_id, payload: r.payload as M };
-}
-
-function newOpId(): string {
-  const bytes = new Uint8Array(16);
-  crypto.getRandomValues(bytes);
-  bytes[6] = ((bytes[6] ?? 0) & 0x0f) | 0x40;
-  bytes[8] = ((bytes[8] ?? 0) & 0x3f) | 0x80;
-  const hex = [...bytes].map((b) => b.toString(16).padStart(2, '0'));
-  return `${hex.slice(0, 4).join('')}-${hex.slice(4, 6).join('')}-${hex.slice(6, 8).join('')}-${hex.slice(8, 10).join('')}-${hex.slice(10, 16).join('')}`;
 }
 
 export function useGame<S, M>(

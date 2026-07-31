@@ -2,6 +2,7 @@
 // directly; every mutation enqueues here. Optimistic application happens in
 // the feature's hooks.ts (TanStack setQueryData) BEFORE enqueue resolves.
 import { supabase } from '../db/client';
+import { newUuid as newOpId } from '../id';
 import {
   insertOp,
   pendingOps,
@@ -54,18 +55,6 @@ export function subscribeOutbox(fn: StatusListener): () => void {
 export function acknowledgeDead(opId: string): void {
   dead = dead.filter((d) => d.op.opId !== opId);
   void emitStatus();
-}
-
-function newOpId(): string {
-  // uuid v4 — crypto.getRandomValues is global in Hermes (Expo SDK 50+)
-  const bytes = new Uint8Array(16);
-  crypto.getRandomValues(bytes);
-  bytes[6] = ((bytes[6] ?? 0) & 0x0f) | 0x40;
-  bytes[8] = ((bytes[8] ?? 0) & 0x3f) | 0x80;
-  const hex = [...bytes].map((b) => b.toString(16).padStart(2, '0'));
-  return `${hex.slice(0, 4).join('')}-${hex.slice(4, 6).join('')}-${hex
-    .slice(6, 8)
-    .join('')}-${hex.slice(8, 10).join('')}-${hex.slice(10, 16).join('')}`;
 }
 
 /** Step 1–3 of §2.3: op_id, persist durably, schedule a flush. */
