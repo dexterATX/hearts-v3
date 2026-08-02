@@ -47,9 +47,9 @@ function Chip({ mood, onPick }: { mood: (typeof MOODS)[number]; onPick: (k: Mood
 
   return (
     <View style={{ overflow: 'visible' }}>
-      {/* echo ring: ripples outward on send, sits under the chip */}
+      {/* echo ring: ripples outward on send, sits under the card */}
       <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, ringStyle]}>
-        <View style={{ flex: 1, borderRadius: radius.pill, borderWidth: 1.5, borderColor: colors.blue }} />
+        <View style={{ flex: 1, borderRadius: radius.md, borderWidth: 1.5, borderColor: colors.blue }} />
       </Animated.View>
       <AnimatedPressable
         accessibilityRole="button"
@@ -81,14 +81,17 @@ function Chip({ mood, onPick }: { mood: (typeof MOODS)[number]; onPick: (k: Mood
         }}
         style={[
           {
-            flexDirection: 'row',
             alignItems: 'center',
+            justifyContent: 'center',
             gap: spacing.sm,
-            borderRadius: radius.pill,
-            paddingVertical: spacing.sm,
-            paddingHorizontal: spacing.lg,
+            borderRadius: radius.md,
+            paddingVertical: spacing.lg,
+            paddingHorizontal: spacing.sm,
             borderWidth: 1,
             overflow: 'hidden',
+            // two squares per row, decently big — the grid below sizes us
+            width: '48%',
+            aspectRatio: 1,
           },
           style,
         ]}
@@ -97,11 +100,11 @@ function Chip({ mood, onPick }: { mood: (typeof MOODS)[number]; onPick: (k: Mood
           pointerEvents="none"
           style={[StyleSheet.absoluteFill, { backgroundColor: colors.blueGlow }, haloStyle]}
         />
-        {/* the bunny IS the mood — chrome emoji went, illustrations stay */}
+        {/* the bunny IS the mood — big in the square, label under it */}
         <Animated.View
-          style={[{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }, contentStyle]}
+          style={[{ alignItems: 'center', gap: spacing.sm }, contentStyle]}
         >
-          <MoodBunny mood={mood.key} size={26} />
+          <MoodBunny mood={mood.key} size={56} />
           <Text variant="small" weight="medium" color={colors.ink}>
             {mood.label}
           </Text>
@@ -133,10 +136,8 @@ export function MoodChips({ onPick }: { onPick: (k: MoodKey) => void }) {
           flexDirection: 'row',
           flexWrap: 'wrap',
           justifyContent: 'center',
-          gap: spacing.sm,
+          gap: spacing.md,
           paddingHorizontal: spacing.lg,
-          maxWidth: 420,
-          alignSelf: 'center',
           width: '100%',
         }}
       >
