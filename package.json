@@ -63,6 +63,7 @@
     "@types/react": "~19.2.0",
     "babel-preset-expo": "~57.0.5",
     "eas-cli": "^21.4.0",
+    "react-dom": "^19.2.3",
     "supabase": "^2.110.0",
     "typescript": "~6.0.3",
     "vitest": "^3.2.7"
