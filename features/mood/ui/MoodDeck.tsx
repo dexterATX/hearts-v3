@@ -198,7 +198,9 @@ function DeckCard({ mood, index, top, cardW, cardH, onSend }: DeckCardProps) {
   };
 
   const cardFace = top ? (
-    // the top card is metal — one shine on the deck, like the MoodCard
+    // the top card is metal — one shine on the deck, like the MoodCard.
+    // the frame masks its metal with the fill view, so the content must carry
+    // exact dimensions (frame thickness 3.5 × 2) or the slab bleeds through
     <MetallicFrame
       cornerRadius={radius.lg}
       stops={SILVER_METAL}
@@ -206,7 +208,15 @@ function DeckCard({ mood, index, top, cardW, cardH, onSend }: DeckCardProps) {
       shine={!reduced}
       style={{ flex: 1 }}
     >
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.sm }}>
+      <View
+        style={{
+          width: cardW - 7,
+          height: cardH - 7,
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: spacing.sm,
+        }}
+      >
         {face}
       </View>
     </MetallicFrame>
