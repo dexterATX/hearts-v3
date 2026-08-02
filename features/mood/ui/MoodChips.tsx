@@ -2,7 +2,7 @@
 // These have to feel physical: press spring plus a blue halo that fades in
 // under the finger, an echo ring that ripples out on send, and a brief "sent"
 // flash, so the tap reads as pressure rather than as a colour swap.
-import { StyleSheet, View, Pressable } from 'react-native';
+import { StyleSheet, useWindowDimensions, View, Pressable } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import Animated, {
   Easing,
@@ -23,7 +23,17 @@ import { MOODS, type MoodKey } from '../model';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
-function Chip({ mood, onPick }: { mood: (typeof MOODS)[number]; onPick: (k: MoodKey) => void }) {
+function Chip({
+  mood,
+  onPick,
+  cardW,
+  cardH,
+}: {
+  mood: (typeof MOODS)[number];
+  onPick: (k: MoodKey) => void;
+  cardW: number;
+  cardH: number;
+}) {
   const scale = useSharedValue(1);
   const glow = useSharedValue(0);
   const fire = useSharedValue(0);
@@ -89,9 +99,9 @@ function Chip({ mood, onPick }: { mood: (typeof MOODS)[number]; onPick: (k: Mood
             paddingHorizontal: spacing.sm,
             borderWidth: 1,
             overflow: 'hidden',
-            // two tall cards per row, centered — taller than wide, never cramped
-            width: '46%',
-            aspectRatio: 0.8,
+            // exact computed size — percentages + aspectRatio misbehave on-device
+            width: cardW,
+            height: cardH,
           },
           style,
         ]}
@@ -129,6 +139,12 @@ function Chip({ mood, onPick }: { mood: (typeof MOODS)[number]; onPick: (k: Mood
 }
 
 export function MoodChips({ onPick }: { onPick: (k: MoodKey) => void }) {
+  const { width } = useWindowDimensions();
+  // two cards per row, centered as a pair: (screen − side padding − one gap) / 2,
+  // then a hair narrower so the pair visibly floats in the middle
+  const cardW = (width - spacing.lg * 2 - spacing.lg) / 2;
+  const cardH = cardW * 1.25; // taller than wide, ~25% longer than the old squares
+
   return (
     <Reveal delay={240} dy={12}>
       <View
@@ -136,13 +152,13 @@ export function MoodChips({ onPick }: { onPick: (k: MoodKey) => void }) {
           flexDirection: 'row',
           flexWrap: 'wrap',
           justifyContent: 'center',
-          gap: spacing.md,
+          gap: spacing.lg,
           paddingHorizontal: spacing.lg,
           width: '100%',
         }}
       >
         {MOODS.map((m) => (
-          <Chip key={m.key} mood={m} onPick={onPick} />
+          <Chip key={m.key} mood={m} onPick={onPick} cardW={cardW} cardH={cardH} />
         ))}
       </View>
     </Reveal>
