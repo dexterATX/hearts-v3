@@ -37,7 +37,7 @@ function EntryCard({ entry, myId }: { entry: JournalEntryRow; myId: string }) {
           ) : null}
           {meta ? (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
-              <MoodBunny mood={entry.mood as string} size={16} />
+              <MoodBunny mood={entry.mood as string} size={18} />
               <Text variant="caption" color={colors.muted}>
                 {meta.label}
               </Text>
@@ -118,7 +118,7 @@ function NewEntryCard() {
                   paddingHorizontal: spacing.md,
                 }}
               >
-                <MoodBunny mood={m.key} size={16} />
+                <MoodBunny mood={m.key} size={18} />
                 <Text variant="caption" color={active ? colors.blue : colors.muted}>
                   {m.label}
                 </Text>

@@ -266,7 +266,7 @@ function MoodTrail({ steps }: { steps: string[] }) {
   return (
     <>
       {shown.map((s, i) => (
-        <MoodBunny key={`${s}-${i}`} mood={s} size={18} />
+        <MoodBunny key={`${s}-${i}`} mood={s} size={20} />
       ))}
       {extra > 0 ? (
         <Text variant="small" color={colors.faint}>{` +${extra}`}</Text>

@@ -101,7 +101,7 @@ function Chip({ mood, onPick }: { mood: (typeof MOODS)[number]; onPick: (k: Mood
         <Animated.View
           style={[{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }, contentStyle]}
         >
-          <MoodBunny mood={mood.key} size={22} />
+          <MoodBunny mood={mood.key} size={26} />
           <Text variant="small" weight="medium" color={colors.ink}>
             {mood.label}
           </Text>

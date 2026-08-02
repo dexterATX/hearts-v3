@@ -133,12 +133,12 @@ export function MoodCard({
   return (
     <Reveal delay={160} dy={14} scale>
       <Card variant="accent" style={BOX}>
-        <View style={{ width: 128, height: 112, alignItems: 'center', justifyContent: 'center' }}>
+        <View style={{ width: 160, height: 144, alignItems: 'center', justifyContent: 'center' }}>
           <Animated.View
             pointerEvents="none"
             style={[StyleSheet.absoluteFill, { alignItems: 'center', justifyContent: 'center' }, glowStyle]}
           >
-            <Svg width={128} height={112}>
+            <Svg width={160} height={144}>
               <Defs>
                 <RadialGradient id={glowId} cx="50%" cy="50%" r="50%">
                   <Stop offset="0%" stopColor={colors.blue} stopOpacity={0.55} />
@@ -146,12 +146,12 @@ export function MoodCard({
                   <Stop offset="100%" stopColor={colors.blue} stopOpacity={0} />
                 </RadialGradient>
               </Defs>
-              <Circle cx={64} cy={56} r={56} fill={`url(#${glowId})`} />
+              <Circle cx={80} cy={72} r={72} fill={`url(#${glowId})`} />
             </Svg>
           </Animated.View>
           {/* the bunny IS the mood — the page's emotional payload */}
           <Animated.View style={popStyle}>
-            <MoodBunny mood={latest.mood} size={64} />
+            <MoodBunny mood={latest.mood} size={96} />
           </Animated.View>
         </View>
         <Text variant="heading" color={colors.ink} style={{ textAlign: 'center' }}>

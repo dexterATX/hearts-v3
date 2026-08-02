@@ -184,7 +184,7 @@ export function NewLetterForm({ onSent }: { onSent: () => void }) {
                     paddingHorizontal: spacing.md,
                   }}
                 >
-                  <MoodBunny mood={m.key} size={16} />
+                  <MoodBunny mood={m.key} size={18} />
                   <Text variant="small" color={on ? colors.blue : colors.ink}>
                     {m.label}
                   </Text>
