@@ -82,6 +82,7 @@ export const fonts = {
 // 1.15–1.3 and take negative tracking, which is most of what makes large text
 // on a dark background read as designed rather than as a default.
 export const type = {
+  mega: { fontSize: 72, lineHeight: 76, fontFamily: fonts.display, letterSpacing: -2 },
   hero: { fontSize: 44, lineHeight: 48, fontFamily: fonts.display, letterSpacing: -1.4 },
   display: { fontSize: 30, lineHeight: 36, fontFamily: fonts.display, letterSpacing: -0.7 },
   title: { fontSize: 22, lineHeight: 28, fontFamily: fonts.displaySemi, letterSpacing: -0.35 },

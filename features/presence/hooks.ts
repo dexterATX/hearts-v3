@@ -1,6 +1,7 @@
 // features/presence/hooks.ts — React bindings over lib/sync/presence + bus.
 import { useEffect, useState, useCallback } from 'react';
 import * as Haptics from 'expo-haptics';
+import { useQuery } from '@tanstack/react-query';
 import { useSession } from '../../lib/session/store';
 import {
   setPresence,
@@ -8,6 +9,7 @@ import {
   type PresenceState,
 } from '../../lib/sync/presence';
 import { emit, on } from '../../lib/sync/bus';
+import { fetchPartnerLastSeen } from './api';
 
 /** Publish my screen (call from each route on focus). */
 export function usePublishPresence(screen: string, typingIn: string | null = null): void {
@@ -26,6 +28,22 @@ export function usePartnerPresence(): PresenceState | null {
   const [others, setOthers] = useState<PresenceState[]>([]);
   useEffect(() => subscribePresence(setOthers), []);
   return others[0] ?? null;
+}
+
+/** When she's offline, presence says nothing — fall back to profiles.last_seen_at.
+ *  `enabled` so we only hit the DB while she is actually absent. A failed fetch
+ *  reads as null ("has not been here yet") rather than an error state. */
+export function usePartnerLastSeen(enabled: boolean) {
+  const coupleId = useSession((s) => s.coupleId);
+  const myId = useSession((s) => s.userId);
+  return useQuery({
+    queryKey: ['last-seen', coupleId],
+    queryFn: async () => {
+      const res = await fetchPartnerLastSeen(coupleId as string, myId as string);
+      return res.ok ? res.data : null;
+    },
+    enabled: enabled && !!coupleId && !!myId,
+  });
 }
 
 /** One-tap "thinking of you" (§7.4). Fast path only — presence implies online. */

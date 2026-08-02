@@ -5,7 +5,7 @@ import { useSession } from '../../lib/session/store';
 import { supabase } from '../../lib/db/client';
 import { on } from '../../lib/sync/bus';
 import { fetchCouple, fetchFeedRows } from './api';
-import { buildFeed, badgeCounts, isLetterOpenable, type FeedItem } from './model';
+import { buildFeed, buildStory, badgeCounts, isLetterOpenable, type FeedInput, type StoryDay } from './model';
 
 const COUPLE_KEY = ['couple'] as const;
 const FEED_KEY = ['home-feed'] as const;
@@ -36,17 +36,18 @@ export function useFeed() {
     enabled: !!coupleId,
   });
 
-  const items: FeedItem[] = useMemo(() => {
-    if (!query.data) return [];
-    return buildFeed([
-      ...query.data.moods.map((m): FeedItem => ({ kind: 'mood', id: m.id, at: m.created_at, authorId: m.author_id, mood: m.mood })),
-      ...query.data.letters.map((l): FeedItem => ({ kind: 'letter', id: l.id, at: l.created_at, authorId: l.author_id, label: l.label, opened: !!l.opened_at })),
-      ...query.data.voice.map((v): FeedItem => ({ kind: 'voice', id: v.id, at: v.created_at, authorId: v.author_id, heard: !!v.heard_at })),
-      ...query.data.photos.map((p): FeedItem => ({ kind: 'photo', id: p.id, at: p.created_at, authorId: p.author_id, caption: p.caption })),
+  const { items, story } = useMemo(() => {
+    if (!query.data) return { items: [] as FeedInput[], story: [] as StoryDay[] };
+    const inputs = buildFeed([
+      ...query.data.moods.map((m): FeedInput => ({ kind: 'mood', id: m.id, at: m.created_at, authorId: m.author_id, mood: m.mood })),
+      ...query.data.letters.map((l): FeedInput => ({ kind: 'letter', id: l.id, at: l.created_at, authorId: l.author_id, label: l.label, opened: !!l.opened_at })),
+      ...query.data.voice.map((v): FeedInput => ({ kind: 'voice', id: v.id, at: v.created_at, authorId: v.author_id, heard: !!v.heard_at })),
+      ...query.data.photos.map((p): FeedInput => ({ kind: 'photo', id: p.id, at: p.created_at, authorId: p.author_id, caption: p.caption })),
     ]);
+    return { items: inputs, story: buildStory(inputs) };
   }, [query.data]);
 
-  return { ...query, items };
+  return { ...query, items, story };
 }
 
 /** Badges: unheard voice notes + letters she can open right now. */

@@ -1,4 +1,6 @@
 // features/home/model.ts — pure home logic. No RN imports. No feature imports.
+// (lib/moods is a sanctioned DOWNWARD import — never import from features/mood.)
+import { moodMeta } from '../../lib/moods';
 
 /** Parse 'YYYY-MM-DD' as a LOCAL date — `new Date(s)` would treat it as UTC
  *  midnight, shifting the day in every timezone west of Greenwich (P1). */
@@ -29,14 +31,29 @@ export function daysLabel(days: number | null): string {
   return `${days} days of us`;
 }
 
-/** The home feed: everything either of us did, newest first, one shape. */
-export type FeedItem =
+/** Raw feed rows: everything either of us did, newest first, one shape. */
+export type FeedInput =
   | { kind: 'mood'; id: string; at: string; authorId: string; mood: string }
   | { kind: 'letter'; id: string; at: string; authorId: string; label: string; opened: boolean }
   | { kind: 'voice'; id: string; at: string; authorId: string; heard: boolean }
   | { kind: 'photo'; id: string; at: string; authorId: string; caption: string };
 
-export function buildFeed(items: FeedItem[], limit = 30): FeedItem[] {
+/** Condensed story line: a run of one person's moods on one local day becomes
+ *  a single `moods` line — steps oldest→newest, consecutive duplicates
+ *  collapsed, id/at from the NEWEST member. Letters, voice notes and photos
+ *  pass through unchanged. */
+export type StoryLine =
+  | { kind: 'moods'; id: string; at: string; authorId: string; steps: string[] }
+  | { kind: 'letter'; id: string; at: string; authorId: string; label: string; opened: boolean }
+  | { kind: 'voice'; id: string; at: string; authorId: string; heard: boolean }
+  | { kind: 'photo'; id: string; at: string; authorId: string; caption: string };
+
+/** Kept name: the feed row the UI renders is the condensed StoryLine. */
+export type FeedItem = StoryLine;
+
+export type StoryDay = { day: string; label: string; lines: StoryLine[] };
+
+export function buildFeed(items: FeedInput[], limit = 30): FeedInput[] {
   return [...items].sort((a, b) => b.at.localeCompare(a.at)).slice(0, limit);
 }
 
@@ -83,11 +100,88 @@ export function isLetterOpenable(
   }
 }
 
+/** Local day key 'YYYY-MM-DD' via startOfLocalDay — NEVER at.slice(0,10):
+ *  `at` is UTC, and UTC slicing files evenings under the wrong day (the P1 bug
+ *  parseLocalDate's comment documents). */
+function localDayKey(d: Date): string {
+  const s = startOfLocalDay(d);
+  const mm = String(s.getMonth() + 1).padStart(2, '0');
+  const dd = String(s.getDate()).padStart(2, '0');
+  return `${s.getFullYear()}-${mm}-${dd}`;
+}
+
+/** Condense the raw feed into story days: newest first (≤60 raw items), mood
+ *  runs merged in a single left-to-right pass, lines grouped by LOCAL calendar
+ *  day, capped at maxDays. */
+export function buildStory(items: FeedInput[], now = new Date(), maxDays = 3): StoryDay[] {
+  const sorted = [...items].sort((a, b) => b.at.localeCompare(a.at)).slice(0, 60);
+
+  const lines: StoryLine[] = [];
+  for (const item of sorted) {
+    const prev = lines[lines.length - 1];
+    if (
+      item.kind === 'mood' &&
+      prev?.kind === 'moods' &&
+      prev.authorId === item.authorId &&
+      localDayKey(new Date(prev.at)) === localDayKey(new Date(item.at))
+    ) {
+      // sorted newest-first ⇒ item is older than every step already in the run
+      if (prev.steps[0] !== item.mood) prev.steps.unshift(item.mood);
+      continue;
+    }
+    lines.push(
+      item.kind === 'mood'
+        ? { kind: 'moods', id: item.id, at: item.at, authorId: item.authorId, steps: [item.mood] }
+        : item,
+    );
+  }
+
+  const todayKey = localDayKey(now);
+  const t = startOfLocalDay(now);
+  const yesterdayKey = localDayKey(new Date(t.getFullYear(), t.getMonth(), t.getDate() - 1));
+
+  const days: StoryDay[] = [];
+  for (const line of lines) {
+    const key = localDayKey(new Date(line.at));
+    const last = days[days.length - 1];
+    if (last && last.day === key) {
+      last.lines.push(line); // days are contiguous: lines are newest-first
+      continue;
+    }
+    if (days.length >= maxDays) break;
+    const label =
+      key === todayKey
+        ? 'today'
+        : key === yesterdayKey
+          ? 'yesterday'
+          : new Date(key + 'T12:00:00')
+              .toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })
+              .toLowerCase();
+    days.push({ day: key, label, lines: [line] });
+  }
+  return days;
+}
+
+export function timeAgo(at: string, now = new Date()): string {
+  const secs = Math.floor((now.getTime() - new Date(at).getTime()) / 1000);
+  if (secs < 60) return 'just now';
+  const mins = Math.floor(secs / 60);
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return new Date(at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
+
 export function feedLine(item: FeedItem, partnerName: string, myId: string): string {
   const who = item.authorId === myId ? 'you' : partnerName;
   switch (item.kind) {
-    case 'mood':
-      return `${who} felt ${item.mood}`;
+    case 'moods': {
+      const first = item.steps[0] ?? '';
+      const last = item.steps[item.steps.length - 1] ?? first;
+      // long runs compress to first → … → last; '…' survives moodMeta as-is
+      const steps = item.steps.length > 3 ? [first, '…', last] : item.steps;
+      return `${who} felt ` + steps.map((s) => moodMeta(s).label).join(' → ');
+    }
     case 'letter':
       return item.opened ? `${who} opened a letter` : `${who} sealed a letter`;
     case 'voice':

@@ -1,18 +1,32 @@
-// app/(tabs)/index.tsx — home (§7.2): days-together, your partner's live mood
-// card, presence, unread badges, feed. Thin: compose slices, own no logic.
-// The feed is the screen's ONE list; everything else rides in its header —
-// a FlashList nested in a ScrollView breaks virtualization (round-4 finding).
-//
-// Layout is one column with spacing.xl between sections: the header stack is
-// where the screen breathes, and a null slice (no presence, empty outbox)
-// simply drops out of the gap rather than leaving a hole.
+// app/(tabs)/index.tsx — home: the choreographed dashboard (presence, days hero, live mood) above the grouped story; FeedList is the one scroller, the hero recedes into a mini pill on scroll.
+import { useMemo } from 'react';
 import { View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { spacing } from '../../theme/theme';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  useReducedMotion,
+  interpolate,
+  Extrapolation,
+} from 'react-native-reanimated';
+import { colors, radius, spacing } from '../../theme/theme';
+import { Text } from '../../ui';
 import { useSession, usePartnerName } from '../../lib/session/store';
-import { DaysTogether, FeedList, OutboxBanner, useCouple, useFeed, useHomeSync } from '../../features/home';
-import { MoodCard, MoodChips, MoodHistory, useMoods, useMoodSync, useSendMood } from '../../features/mood';
+import {
+  DaysTogether,
+  FeedList,
+  OutboxBanner,
+  daysTogether,
+  daysLabel,
+  useCouple,
+  useFeed,
+  useHomeSync,
+} from '../../features/home';
+import { MoodCard, MoodChips, useMoods, useMoodSync, useSendMood } from '../../features/mood';
 import { PresenceChip, usePublishPresence } from '../../features/presence';
+
+// Scroll distance over which the hero counter fades/shrinks into the pill.
+const HERO_RANGE = 160;
 
 export default function HomeTab() {
   usePublishPresence('index');
@@ -26,27 +40,127 @@ export default function HomeTab() {
   const myId = useSession((s) => s.userId);
   const partnerName = usePartnerName();
 
+  const scrollY = useSharedValue(0);
+  const reduced = useReducedMotion();
+
+  // Hero recede: the big counter quietly falls back as the story takes over.
+  const heroStyle = useAnimatedStyle(() =>
+    reduced
+      ? {}
+      : {
+          opacity: interpolate(scrollY.value, [0, HERO_RANGE * 0.75], [1, 0.15], Extrapolation.CLAMP),
+          transform: [
+            { scale: interpolate(scrollY.value, [0, HERO_RANGE], [1, 0.88], Extrapolation.CLAMP) },
+            { translateY: interpolate(scrollY.value, [0, HERO_RANGE], [0, -14], Extrapolation.CLAMP) },
+          ],
+        },
+  );
+
+  // Mini status pill: the counter's understudy, fading in as the hero exits.
+  const miniStyle = useAnimatedStyle(() =>
+    reduced
+      ? { opacity: 0 }
+      : {
+          opacity: interpolate(
+            scrollY.value,
+            [HERO_RANGE - 20, HERO_RANGE + 20],
+            [0, 1],
+            Extrapolation.CLAMP,
+          ),
+          transform: [
+            {
+              translateY: interpolate(
+                scrollY.value,
+                [HERO_RANGE - 20, HERO_RANGE + 20],
+                [-8, 0],
+                Extrapolation.CLAMP,
+              ),
+            },
+          ],
+        },
+  );
+
+  const headerElement = useMemo(
+    () => (
+      <View style={{ gap: spacing.xl, paddingTop: spacing.md, paddingBottom: spacing.xl }}>
+        <OutboxBanner />
+        <PresenceChip />
+        <Animated.View style={heroStyle}>
+          <DaysTogether anniversary={couple.data?.anniversary_date ?? null} loading={couple.isPending} />
+        </Animated.View>
+        <View style={{ paddingHorizontal: spacing.lg }}>
+          <MoodCard
+            rows={moods.data ?? []}
+            partnerId={partnerId}
+            partnerName={partnerName}
+            loading={moods.isPending}
+          />
+        </View>
+        <View>
+          <Text
+            variant="overline"
+            color={colors.faint}
+            style={{ textAlign: 'center', textTransform: 'uppercase', marginBottom: -spacing.md }}
+          >
+            how are you right now
+          </Text>
+          <MoodChips onPick={(k) => void sendMood(k)} />
+        </View>
+      </View>
+    ),
+    [
+      couple.data?.anniversary_date,
+      couple.isPending,
+      moods.data,
+      moods.isPending,
+      partnerId,
+      partnerName,
+      myId,
+      feed.error,
+      feed.isPending,
+      sendMood,
+      heroStyle,
+    ],
+  );
+
   return (
     <SafeAreaView style={{ flex: 1 }} edges={['top']}>
       <FeedList
-        items={feed.items}
+        days={feed.story ?? []}
         loading={feed.isLoading}
         error={feed.error ? 'the feed would not load' : null}
         partnerName={partnerName}
         myId={myId}
-        header={
-          <View style={{ gap: spacing.xl, paddingTop: spacing.md, paddingBottom: spacing.xl }}>
-            <OutboxBanner />
-            <PresenceChip />
-            <DaysTogether anniversary={couple.data?.anniversary_date ?? null} />
-            <View style={{ paddingHorizontal: spacing.lg }}>
-              <MoodCard rows={moods.data ?? []} partnerId={partnerId} partnerName={partnerName} />
-            </View>
-            <MoodChips onPick={(k) => void sendMood(k)} />
-            <MoodHistory rows={moods.data ?? []} partnerName={partnerName} myId={myId} />
-          </View>
-        }
+        header={headerElement}
+        scrollY={scrollY}
+        refreshing={feed.isRefetching}
+        onRefresh={() => void feed.refetch()}
       />
+      <Animated.View
+        pointerEvents="none"
+        style={[
+          { position: 'absolute', top: spacing.sm, left: 0, right: 0, alignItems: 'center' },
+          miniStyle,
+        ]}
+      >
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: spacing.sm,
+            backgroundColor: colors.surface,
+            borderRadius: radius.pill,
+            paddingVertical: spacing.xs,
+            paddingHorizontal: spacing.lg,
+            borderWidth: 1,
+            borderColor: colors.line,
+          }}
+        >
+          <Text variant="overline" color={colors.silver} style={{ textTransform: 'uppercase' }}>
+            {daysLabel(daysTogether(couple.data?.anniversary_date ?? null))}
+          </Text>
+        </View>
+      </Animated.View>
     </SafeAreaView>
   );
 }

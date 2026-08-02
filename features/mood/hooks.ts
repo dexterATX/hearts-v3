@@ -80,7 +80,7 @@ export function useSendMood() {
 
   return async (mood: MoodKey) => {
     if (!coupleId || !userId) return;
-    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); // §5: heavy on mood ping
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); // §5: heavy on mood ping — fire-and-forget, never gate the optimistic write on a haptic promise
 
     // 1. optimistic: my chip lands on my screen NOW
     const optimistic: MoodRow = {

@@ -14,20 +14,3 @@ export function latestPerAuthor(rows: readonly MoodRow[]): Map<string, MoodRow> 
   }
   return map;
 }
-
-/** Group history into day buckets for the history list. */
-export function groupByDay(rows: readonly MoodRow[]): { day: string; rows: MoodRow[] }[] {
-  const groups = new Map<string, MoodRow[]>();
-  for (const row of rows) {
-    const day = row.created_at.slice(0, 10);
-    const list = groups.get(day) ?? [];
-    list.push(row);
-    groups.set(day, list);
-  }
-  return [...groups.entries()]
-    .sort((a, b) => b[0].localeCompare(a[0]))
-    .map(([day, dayRows]) => ({
-      day,
-      rows: [...dayRows].sort((a, b) => b.created_at.localeCompare(a.created_at)),
-    }));
-}
