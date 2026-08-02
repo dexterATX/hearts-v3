@@ -3,17 +3,47 @@ import { supabase } from '../../lib/db/client';
 import { ok, err, toAppError, type Result } from '../../lib/result';
 import type { LetterRow, MoodRow } from '../../lib/db/database.types';
 
-export async function fetchLetters(coupleId: string): Promise<Result<LetterRow[]>> {
+/** Every column EXCEPT body. 0008 revoked table-level SELECT and re-granted
+ *  these, so `select('*')` would now fail with "permission denied for column
+ *  body" — which is the point: a sealed letter's text must not reach the
+ *  recipient's device before it unlocks. */
+const LIST_COLUMNS =
+  'id,couple_id,author_id,label,audio_url,lock_type,unlock_at,unlock_mood,opened_at,op_id,created_at';
+
+/** A letter as it appears in the pile and on the shelf — no body. */
+export type LetterListRow = Omit<LetterRow, 'body'>;
+
+export async function fetchLetters(coupleId: string): Promise<Result<LetterListRow[]>> {
   try {
     const res = await supabase
       .from('letters')
-      .select('*')
+      .select(LIST_COLUMNS)
       .eq('couple_id', coupleId)
       .order('created_at', { ascending: false });
     if (res.error) return err(toAppError(res.error, 'letters would not load'));
-    return ok(res.data);
+    return ok(res.data as LetterListRow[]);
   } catch (e) {
     return err(toAppError(e, 'letters would not load'));
+  }
+}
+
+/** The body, served only if the server agrees the letter is open (0008).
+ *  Raises "still sealed" otherwise — the seal is enforced in Postgres now,
+ *  not by whether the UI happens to render it. */
+export async function fetchLetterBody(letterId: string): Promise<Result<string>> {
+  try {
+    const res = await supabase.rpc('letter_body', { p_letter_id: letterId });
+    if (res.error) {
+      const sealed = res.error.message.includes('still sealed');
+      return err({
+        code: sealed ? 'validation' : 'rls',
+        message: sealed ? 'not yet — this one is still sealed' : 'could not open the letter',
+        cause: res.error,
+      });
+    }
+    return ok((res.data as string | null) ?? '');
+  } catch (e) {
+    return err(toAppError(e, 'could not open the letter'));
   }
 }
 

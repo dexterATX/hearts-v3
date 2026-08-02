@@ -6,6 +6,7 @@ import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import Constants from 'expo-constants';
 import { supabase } from '../db/client';
+import { colors } from '../../theme/theme';
 import { ok, err, toAppError, type Result } from '../result';
 
 Notifications.setNotificationHandler({
@@ -28,7 +29,7 @@ export async function registerForPush(): Promise<Result<string>> {
         name: 'hearts',
         importance: Notifications.AndroidImportance.MAX,
         vibrationPattern: [0, 250, 250, 250],
-        lightColor: '#FF6B8A',
+        lightColor: colors.blue,
       });
     }
 
@@ -36,7 +37,7 @@ export async function registerForPush(): Promise<Result<string>> {
     const final =
       status === 'granted' ? status : (await Notifications.requestPermissionsAsync()).status;
     if (final !== 'granted') {
-      return err({ code: 'validation', message: 'notifications are off — turn them on to feel her pings' });
+      return err({ code: 'validation', message: 'notifications are off — turn them on to feel the pings' });
     }
 
     const projectId = Constants.expoConfig?.extra?.eas?.projectId as string | undefined;
@@ -53,6 +54,10 @@ export async function registerForPush(): Promise<Result<string>> {
     }
     return ok(token.data);
   } catch (e) {
+    // _layout calls this with `void`, so the Result is dropped — without this
+    // line a registration failure leaves no trace at all and the phone just
+    // silently never gets pushes.
+    console.warn(`[push] registration failed: ${(e as { message?: string })?.message ?? String(e)}`);
     return err(toAppError(e, 'could not set up notifications'));
   }
 }

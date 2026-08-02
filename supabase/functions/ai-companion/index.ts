@@ -14,13 +14,13 @@ const cors = {
 type Mode = 'date-ideas' | 'poem' | 'quiz' | 'recap';
 const MODES: Mode[] = ['date-ideas', 'poem', 'quiz', 'recap'];
 
-function systemPrompt(mode: Mode, names: { me: string; her: string }): string {
-  const base = `You are the private companion inside "hearts", a two-person app for ${names.me} and ${names.her}. Write warmly, plainly, and personally. Never cheesy greeting-card filler. Never mention being an AI.`;
+function systemPrompt(mode: Mode, names: { me: string; partner: string }): string {
+  const base = `You are the private companion inside "hearts", a two-person app for ${names.me} and ${names.partner}. You are always speaking to ${names.me}, about ${names.partner}. Write warmly, plainly, and personally. Never cheesy greeting-card filler. Never mention being an AI. Never assume anyone's gender — use their names, or "you" and "they".`;
   switch (mode) {
     case 'date-ideas':
       return `${base} Suggest exactly 3 date ideas, each with a title and two sentences. Make them specific and doable this month, not generic.`;
     case 'poem':
-      return `${base} Draft a short poem (8-14 lines) he could finish and send to her. Write it in his voice: direct, tender, a little plain-spoken. Leave it 90% done so he can make it his.`;
+      return `${base} Draft a short poem (8-14 lines) ${names.me} could finish and send to ${names.partner}. Write it in ${names.me}'s own voice: direct, tender, a little plain-spoken. Leave it 90% done so ${names.me} can make it theirs.`;
     case 'quiz':
       return `${base} Write 5 "how well do you know me" quiz questions for a couple. Each with 4 options; mark the suggested answer. Keep them sweet, funny, or deep — never cruel.`;
     case 'recap':
@@ -33,7 +33,7 @@ function userPrompt(mode: Mode, context: string): string {
     case 'date-ideas':
       return `Context about us: ${context || 'a couple who like quiet evenings and small adventures'}`;
     case 'poem':
-      return `What the poem should be about: ${context || 'how much she means to me'}`;
+      return `What the poem should be about: ${context || 'how much they mean to me'}`;
     case 'quiz':
       return `About us (for inspiration): ${context || 'long-distance-ish, playful, like games'}`;
     case 'recap':
@@ -72,7 +72,7 @@ Deno.serve(async (req) => {
   }
   lastCallAt.set(caller, now);
 
-  let body: { mode?: string; context?: string; names?: { me?: string; her?: string } };
+  let body: { mode?: string; context?: string; names?: { me?: string; partner?: string; her?: string } };
   try {
     body = await req.json();
   } catch {
@@ -81,9 +81,13 @@ Deno.serve(async (req) => {
   const mode = MODES.includes(body.mode as Mode) ? (body.mode as Mode) : null;
   if (!mode) return new Response('unknown mode', { status: 400, headers: cors });
   const context = String(body.context ?? '').slice(0, 4000);
+  // `||` not `??`: the client sends '' when a profile has not loaded yet, and
+  // an empty name would render the prompt as "…app for  and ".
   const names = {
-    me: String(body.names?.me ?? 'Scotty').slice(0, 60),
-    her: String(body.names?.her ?? 'Annsleigh').slice(0, 60),
+    me: String(body.names?.me || 'one partner').slice(0, 60),
+    // `her` is the pre-two-way key: still read so a phone running the old
+    // bundle keeps working until it updates.
+    partner: String(body.names?.partner || body.names?.her || 'the other').slice(0, 60),
   };
 
   const upstream = await fetch(`${AI_BASE_URL}/chat/completions`, {

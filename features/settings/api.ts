@@ -86,6 +86,14 @@ export async function exportAllData(coupleId: string): Promise<Result<Record<str
       const query =
         table === 'couples'
           ? supabase.from(table).select('*').eq('id', coupleId)
+          : table === 'letters'
+            // 0008 revoked SELECT on letters.body, so select('*') fails here.
+            // The export carries the pile's metadata; a sealed letter's text
+            // is not the exporter's to take out of the app.
+            ? supabase
+                .from(table)
+                .select('id,couple_id,author_id,label,audio_url,lock_type,unlock_at,unlock_mood,opened_at,op_id,created_at')
+                .eq('couple_id', coupleId)
           : table === 'game_moves'
             ? supabase.from(table).select('*').in(
                 'session_id',

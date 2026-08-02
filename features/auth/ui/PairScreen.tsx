@@ -1,8 +1,9 @@
 // features/auth/ui/PairScreen.tsx — 6-char invite code, both join orders (§7.1).
 import { useState } from 'react';
-import { View, TextInput } from 'react-native';
+import { View, ScrollView } from 'react-native';
+import { router } from 'expo-router';
 import * as Clipboard from 'expo-clipboard';
-import { Text, Button, Card } from '../../../ui';
+import { Text, Button, Card, Input, Icon } from '../../../ui';
 import { colors, spacing, radius } from '../../../theme/theme';
 import { usePairing } from '../hooks';
 import { isValidInviteCode, normalizeInviteCode } from '../model';
@@ -29,7 +30,13 @@ export function PairScreen() {
       return;
     }
     const res = await join(normalizeInviteCode(theirCode));
-    if (!res.ok) setError(res.error.message);
+    if (!res.ok) {
+      setError(res.error.message);
+      return;
+    }
+    // the joiner is done the moment the RPC succeeds — the partner profile
+    // arrives on the next hydrate, so don't make her wait on it here
+    router.replace('/(tabs)');
   };
 
   const onCopy = async () => {
@@ -40,88 +47,119 @@ export function PairScreen() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.bg, justifyContent: 'center', padding: spacing.xl }}>
-      <Text variant="title" style={{ textAlign: 'center', marginBottom: spacing.xxl }}>
+    // centred when it fits, scrollable when it does not — the code panel makes
+    // this screen taller than a small phone on both paths at once
+    <ScrollView
+      style={{ flex: 1, backgroundColor: colors.bg }}
+      keyboardShouldPersistTaps="handled"
+      contentContainerStyle={{
+        flexGrow: 1,
+        justifyContent: 'center',
+        paddingHorizontal: spacing.xl,
+        paddingVertical: spacing.huge,
+        gap: spacing.xl,
+      }}
+    >
+      <Text variant="display" style={{ textAlign: 'center', marginBottom: spacing.lg }}>
         become us
       </Text>
 
       {myCode ? (
-        <Card style={{ alignItems: 'center', marginBottom: spacing.xl }}>
-          <Text variant="small" color={colors.muted} style={{ marginBottom: spacing.md }}>
-            send her this code — it is only ours
+        <Card style={{ alignItems: 'center', gap: spacing.lg }}>
+          <Text variant="small" color={colors.muted} style={{ textAlign: 'center' }}>
+            share this code — it is only ours
           </Text>
-          <Text
-            variant="display"
-            color={colors.rose}
-            style={{ letterSpacing: 8, marginBottom: spacing.lg }}
+          {/* the code is the hero of this screen: silver on glass, in a panel
+              of its own so it reads as a thing to be handed over */}
+          <View
+            style={{
+              alignSelf: 'stretch',
+              alignItems: 'center',
+              backgroundColor: colors.silverSoft,
+              borderRadius: radius.md,
+              borderWidth: 3,
+              borderColor: colors.lineBright,
+              paddingVertical: spacing.lg,
+              paddingHorizontal: spacing.md,
+            }}
           >
-            {myCode}
-          </Text>
-          <Button label={copied ? 'copied ♥' : 'copy it'} tone="ghost" onPress={() => void onCopy()} />
-          <Text variant="caption" color={colors.muted} style={{ marginTop: spacing.lg }}>
-            waiting for her to join… this screen updates itself
+            <Text
+              variant="hero"
+              color={colors.silver}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              accessibilityLabel={`your invite code is ${myCode.split('').join(' ')}`}
+              // tracking is added AFTER the last glyph too, so a centred run
+              // sits half a space left of true centre — pull it back
+              style={{ letterSpacing: spacing.sm, marginLeft: spacing.xs }}
+            >
+              {myCode}
+            </Text>
+          </View>
+          <Button
+            label={copied ? 'copied ♥' : 'copy it'}
+            tone="secondary"
+            icon={copied ? 'check' : undefined}
+            onPress={() => void onCopy()}
+            style={{ alignSelf: 'stretch' }}
+          />
+          <Text variant="caption" color={colors.muted} style={{ textAlign: 'center' }}>
+            waiting for them to join… this screen updates itself
           </Text>
         </Card>
       ) : (
-        <Card style={{ marginBottom: spacing.xl }}>
-          <Text variant="small" color={colors.muted} style={{ marginBottom: spacing.sm }}>
-            start us — you will get a code to send her
+        <Card style={{ gap: spacing.lg }}>
+          <Text variant="small" color={colors.muted}>
+            start us — you will get a code to share
           </Text>
-          <TextInput
-            placeholder="what should she call you?"
-            placeholderTextColor={colors.muted}
-            value={name}
-            onChangeText={setName}
-            style={{
-              color: colors.ink,
-              borderBottomWidth: 1,
-              borderColor: colors.line,
-              paddingVertical: spacing.md,
-              marginBottom: spacing.lg,
-              fontSize: 17,
-            }}
+          <Input placeholder="what should they call you?" value={name} onChangeText={setName} />
+          <Button
+            label="make our code"
+            size="lg"
+            haptic="medium"
+            disabled={busy}
+            onPress={() => void onCreate()}
           />
-          <Button label="make our code" haptic="medium" disabled={busy} onPress={() => void onCreate()} />
         </Card>
       )}
 
-      <Card>
-        <Text variant="small" color={colors.muted} style={{ marginBottom: spacing.sm }}>
-          or she already has a code — type it in
+      <Card style={{ gap: spacing.lg }}>
+        <Text variant="small" color={colors.muted}>
+          or you already have a code — type it in
         </Text>
-        <TextInput
+        <Input
+          code
           placeholder="ABC123"
-          placeholderTextColor={colors.muted}
           autoCapitalize="characters"
           autoCorrect={false}
           maxLength={6}
           value={theirCode}
           onChangeText={setTheirCode}
-          style={{
-            color: colors.ink,
-            fontSize: 24,
-            letterSpacing: 6,
-            textAlign: 'center',
-            borderWidth: 1,
-            borderColor: colors.line,
-            borderRadius: radius.md,
-            paddingVertical: spacing.md,
-            marginBottom: spacing.lg,
-          }}
         />
         {error ? (
-          <Text variant="small" color={colors.rose} style={{ marginBottom: spacing.md }}>
-            {error}
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+            <Icon name="alert" size={spacing.lg} color={colors.danger} />
+            <Text
+              variant="small"
+              color={colors.danger}
+              accessibilityLiveRegion="polite"
+              style={{ flex: 1 }}
+            >
+              {error}
+            </Text>
+          </View>
         ) : null}
+        {/* `busy` is shared by both paths, so neither button claims the
+            spinner — a create in flight must not make join look like it is
+            working. Both dim, exactly as before. */}
         <Button
-          label="join her"
-          tone="gold"
+          label="join them"
+          tone="secondary"
           haptic="heavy"
           disabled={busy || theirCode.length !== 6}
           onPress={() => void onJoin()}
         />
       </Card>
-    </View>
+    </ScrollView>
   );
 }

@@ -46,20 +46,29 @@ export function sealedReason(
   }
 }
 
-export const isOpened = (l: LetterRow): boolean => !!l.opened_at;
+export const isOpened = (l: Pick<LetterRow, 'opened_at'>): boolean => !!l.opened_at;
+
+// These are generic over the row shape because the list no longer carries a
+// `body` (0008 keeps sealed text on the server), while the tests still pass
+// full rows. They only ever touch opened_at / created_at / author_id.
 
 /** The shelf: opened, newest first. NEVER a remaining count (§7.5) — the
  *  sealed pile is a promise, not a number. */
-export function shelf(rows: readonly LetterRow[]): LetterRow[] {
+export function shelf<T extends Pick<LetterRow, 'opened_at'>>(rows: readonly T[]): T[] {
   return rows.filter(isOpened).sort((a, b) => (b.opened_at ?? '').localeCompare(a.opened_at ?? ''));
 }
 
 /** The sealed pile: unopened, ordered by when they were written. */
-export function sealed(rows: readonly LetterRow[]): LetterRow[] {
+export function sealed<T extends Pick<LetterRow, 'opened_at' | 'created_at'>>(
+  rows: readonly T[],
+): T[] {
   return rows.filter((l) => !isOpened(l)).sort((a, b) => b.created_at.localeCompare(a.created_at));
 }
 
 /** Letters I wrote vs letters for me. */
-export function writtenBy(rows: readonly LetterRow[], authorId: string): LetterRow[] {
+export function writtenBy<T extends Pick<LetterRow, 'author_id'>>(
+  rows: readonly T[],
+  authorId: string,
+): T[] {
   return rows.filter((l) => l.author_id === authorId);
 }

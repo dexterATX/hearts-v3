@@ -16,6 +16,10 @@ ios/
 .env.local
 .env.*.local
 
+# Firebase android config — carries the FCM api key; keep it local and
+# upload it to EAS as a file secret for cloud builds
+google-services.json
+
 # supabase local
 supabase/.branches/
 supabase/.temp/
@@ -31,3 +35,7 @@ supabase/.env
 .idea/
 .vscode/
 *.log
+
+# release signing — the keystore and its passwords never go in git
+credentials/
+.claude/

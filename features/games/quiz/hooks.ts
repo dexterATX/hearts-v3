@@ -1,4 +1,4 @@
-// features/games/quiz/hooks.ts — write questions about yourself, answer hers.
+// features/games/quiz/hooks.ts — write questions about yourself, answer theirs.
 import { useState, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSession } from '../../../lib/session/store';
@@ -57,17 +57,17 @@ export function useQuiz(sessionId: string | null) {
     async (n = 6): Promise<boolean> => {
       if (!userId || !partnerId || !questions.data) return false;
       const mine = questions.data.filter((q) => q.author_id === userId);
-      const hers = questions.data.filter((q) => q.author_id === partnerId);
+      const theirs = questions.data.filter((q) => q.author_id === partnerId);
       const interleaved: QuizQuestion[] = [];
-      const maxLen = Math.max(mine.length, hers.length);
+      const maxLen = Math.max(mine.length, theirs.length);
       for (let i = 0; i < maxLen && interleaved.length < n; i++) {
         const qm = mine[i];
         if (qm) {
           interleaved.push({ id: qm.id, authorId: qm.author_id, prompt: qm.prompt, options: qm.options as string[], answerIndex: qm.answer_index });
         }
-        const qh = hers[i];
-        if (qh && interleaved.length < n) {
-          interleaved.push({ id: qh.id, authorId: qh.author_id, prompt: qh.prompt, options: qh.options as string[], answerIndex: qh.answer_index });
+        const qt = theirs[i];
+        if (qt && interleaved.length < n) {
+          interleaved.push({ id: qt.id, authorId: qt.author_id, prompt: qt.prompt, options: qt.options as string[], answerIndex: qt.answer_index });
         }
       }
       if (interleaved.length === 0) return false;

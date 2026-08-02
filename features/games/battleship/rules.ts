@@ -149,7 +149,9 @@ export const battleshipRules: GameRules<BattleshipState, BattleshipMove> = {
     const finder = last?.by ?? null;
     return {
       winner: finder,
-      summary: finder ? 'you found every last one of my hearts — they were all yours anyway' : 'all hearts found',
+      // Symmetric on purpose: `summary` renders on BOTH phones from the same
+      // move log, so it cannot say "you found" — the other player didn't.
+      summary: finder ? 'all hearts found — they were never really hidden' : 'all hearts found',
     };
   },
 };

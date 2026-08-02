@@ -1,7 +1,7 @@
 // features/journal/ui/JournalList.tsx — shared + private entries, calendar days.
 import { useState } from 'react';
-import { View, Pressable, TextInput, ScrollView } from 'react-native';
-import { Text, Card, Button, Skeleton } from '../../../ui';
+import { View, Pressable, ScrollView } from 'react-native';
+import { Text, Card, Button, Input, Icon, SkeletonCard } from '../../../ui';
 import { colors, spacing, radius } from '../../../theme/theme';
 import { MOODS, moodMeta } from '../../../lib/moods';
 import { useJournal, useAddEntry, useDeleteEntry } from '../hooks';
@@ -13,13 +13,34 @@ function EntryCard({ entry, myId }: { entry: JournalEntryRow; myId: string }) {
   const del = useDeleteEntry();
   const [armed, setArmed] = useState(false); // two-tap destructive (§6)
   const meta = entry.mood ? moodMeta(entry.mood) : null;
+  const isPrivate = entry.visibility === 'private';
 
   return (
-    <Card style={{ marginBottom: spacing.sm }}>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: spacing.xs }}>
-        <Text variant="caption" color={entry.visibility === 'private' ? colors.gold : colors.muted}>
-          {entry.visibility === 'private' ? '🔒 only you' : ''} {meta ? `${meta.emoji} ${meta.label}` : ''}
-        </Text>
+    <Card variant="quiet" style={{ marginBottom: spacing.sm }}>
+      <View
+        style={{
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          gap: spacing.sm,
+          marginBottom: spacing.md,
+        }}
+      >
+        <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+          {isPrivate ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+              <Icon name="lock" size={spacing.md} color={colors.silver} />
+              <Text variant="overline" color={colors.silver} style={{ textTransform: 'uppercase' }}>
+                only you
+              </Text>
+            </View>
+          ) : null}
+          {meta ? (
+            <Text variant="caption" color={colors.muted}>
+              {meta.emoji} {meta.label}
+            </Text>
+          ) : null}
+        </View>
         {entry.author_id === myId ? (
           <Pressable
             accessibilityRole="button"
@@ -32,13 +53,13 @@ function EntryCard({ entry, myId }: { entry: JournalEntryRow; myId: string }) {
               await del(entry.id);
             }}
           >
-            <Text variant="caption" color={armed ? colors.rose : colors.muted}>
+            <Text variant="caption" color={armed ? colors.danger : colors.muted}>
               {armed ? 'tap again to let it go' : 'let go'}
             </Text>
           </Pressable>
         ) : null}
       </View>
-      <Text variant="small">{entry.body}</Text>
+      <Text variant="body">{entry.body}</Text>
     </Card>
   );
 }
@@ -60,50 +81,75 @@ function NewEntryCard() {
   };
 
   if (!open) {
-    return <Button label="write in our journal" tone="ghost" onPress={() => setOpen(true)} />;
+    return <Button label="write in our journal" tone="ghost" icon="book" onPress={() => setOpen(true)} />;
   }
 
   return (
-    <Card>
-      <TextInput
+    <Card style={{ gap: spacing.lg }}>
+      <Input
         placeholder="today with you…"
-        placeholderTextColor={colors.muted}
         value={body}
         onChangeText={setBody}
         multiline
         autoFocus
-        style={{
-          color: colors.ink,
-          fontSize: 15,
-          minHeight: 90,
-          textAlignVertical: 'top',
-          marginBottom: spacing.md,
-        }}
+        style={{ minHeight: spacing.huge * 2, textAlignVertical: 'top' }}
       />
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: spacing.md }}>
-        {MOODS.map((m) => (
-          <Pressable key={m.key} onPress={() => setMood(mood === m.key ? null : m.key)} style={{ margin: spacing.xs }}>
-            <View
-              style={{
-                borderWidth: 1,
-                borderColor: mood === m.key ? colors.rose : colors.line,
-                borderRadius: radius.lg,
-                paddingVertical: spacing.xs,
-                paddingHorizontal: spacing.sm,
-              }}
+
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
+        {MOODS.map((m) => {
+          const active = mood === m.key;
+          return (
+            <Pressable
+              key={m.key}
+              accessibilityRole="button"
+              accessibilityState={{ selected: active }}
+              onPress={() => setMood(active ? null : m.key)}
             >
-              <Text variant="caption" color={mood === m.key ? colors.rose : colors.muted}>
-                {m.emoji} {m.label}
-              </Text>
-            </View>
-          </Pressable>
-        ))}
+              <View
+                style={{
+                  borderWidth: 3,
+                  borderColor: active ? colors.blue : colors.line,
+                  backgroundColor: active ? colors.blueSoft : 'transparent',
+                  borderRadius: radius.pill,
+                  paddingVertical: spacing.sm,
+                  paddingHorizontal: spacing.md,
+                }}
+              >
+                <Text variant="caption" color={active ? colors.blue : colors.muted}>
+                  {m.emoji} {m.label}
+                </Text>
+              </View>
+            </Pressable>
+          );
+        })}
       </View>
-      <Pressable onPress={() => setPriv(!priv)} style={{ marginBottom: spacing.md }}>
-        <Text variant="small" color={priv ? colors.gold : colors.muted}>
-          {priv ? '🔒 private — only your eyes' : '👀 shared — both of you can read this'}
-        </Text>
+
+      <Pressable
+        accessibilityRole="button"
+        accessibilityState={{ selected: priv }}
+        onPress={() => setPriv(!priv)}
+        style={{ alignSelf: 'flex-start' }}
+      >
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: spacing.xs,
+            borderWidth: 3,
+            borderColor: priv ? colors.silver : colors.line,
+            backgroundColor: priv ? colors.silverSoft : 'transparent',
+            borderRadius: radius.pill,
+            paddingVertical: spacing.sm,
+            paddingHorizontal: spacing.md,
+          }}
+        >
+          <Icon name={priv ? 'lock' : 'book'} size={spacing.lg} color={priv ? colors.silver : colors.muted} />
+          <Text variant="caption" color={priv ? colors.silver : colors.muted} style={{ flexShrink: 1 }}>
+            {priv ? 'private — only your eyes' : 'shared — both of you can read this'}
+          </Text>
+        </View>
       </Pressable>
+
       <View style={{ flexDirection: 'row', gap: spacing.sm }}>
         <Button label="keep it" haptic="medium" onPress={() => void submit()} style={{ flex: 1 }} />
         <Button label="never mind" tone="ghost" onPress={() => setOpen(false)} style={{ flex: 1 }} />
@@ -118,9 +164,9 @@ export function JournalList() {
 
   if (journal.isLoading) {
     return (
-      <View style={{ padding: spacing.lg }}>
-        <Skeleton height={90} style={{ marginBottom: spacing.sm }} />
-        <Skeleton height={90} />
+      <View style={{ padding: spacing.lg, gap: spacing.sm }}>
+        <SkeletonCard lines={3} />
+        <SkeletonCard lines={2} />
       </View>
     );
   }
@@ -128,8 +174,9 @@ export function JournalList() {
   if (journal.error && !journal.data) {
     return (
       <View style={{ padding: spacing.lg }}>
-        <Card>
-          <Text variant="small" color={colors.rose}>
+        <Card variant="danger" style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+          <Icon name="alert" size={spacing.xl} color={colors.danger} />
+          <Text variant="small" color={colors.danger} style={{ flex: 1 }}>
             the journal would not open — pull down to try again
           </Text>
         </Card>
@@ -140,20 +187,26 @@ export function JournalList() {
   const days = groupByDay(journal.data ?? []);
 
   return (
-    <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: spacing.lg }}>
-      <View style={{ marginBottom: spacing.lg }}>
+    <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: spacing.lg, paddingBottom: spacing.xxl }}>
+      <View style={{ marginBottom: spacing.xl }}>
         <NewEntryCard />
       </View>
+
       {days.length === 0 ? (
-        <Card>
-          <Text variant="small" color={colors.muted}>
+        <Card style={{ alignItems: 'center', gap: spacing.md, paddingVertical: spacing.xl }}>
+          <Icon name="book" size={spacing.xxl} color={colors.muted} />
+          <Text variant="small" color={colors.muted} style={{ textAlign: 'center' }}>
             the journal is blank — write the first line of it together.
           </Text>
         </Card>
       ) : (
         days.map((d) => (
-          <View key={d.day} style={{ marginBottom: spacing.lg }}>
-            <Text variant="caption" color={colors.gold} style={{ marginBottom: spacing.sm }}>
+          <View key={d.day} style={{ marginBottom: spacing.xl }}>
+            <Text
+              variant="overline"
+              color={colors.muted}
+              style={{ marginBottom: spacing.md, textTransform: 'uppercase' }}
+            >
               {new Date(`${d.day}T12:00:00`).toLocaleDateString(undefined, {
                 weekday: 'long',
                 month: 'long',
@@ -166,7 +219,8 @@ export function JournalList() {
           </View>
         ))
       )}
-      <Text variant="caption" color={colors.muted} style={{ textAlign: 'center', marginTop: spacing.md }}>
+
+      <Text variant="caption" color={colors.muted} style={{ textAlign: 'center', marginTop: spacing.xl }}>
         {excerpt('private entries never leave your phone unlocked — they are yours alone', 200)}
       </Text>
     </ScrollView>

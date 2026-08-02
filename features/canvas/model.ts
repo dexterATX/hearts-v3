@@ -44,4 +44,18 @@ export const BRUSHES = [
   { name: 'highlighter', width: 18 },
 ] as const;
 
-export const PALETTE = ['#FF6B8A', '#F5C77E', '#F6EDF2', '#9A8A96', '#E8557E', '#7EC4F5'] as const;
+// The one full-bleed colour surface in the app, so it has to come from the
+// same 218° anchor as everything else — six inks that read on blue-black
+// glass: white, silver, the accent blue and its deep tone, plus a cool cyan
+// and a warm counterpoint so a drawing is not monochrome.
+export const PALETTE = ['#E8EEF9', '#C6CFDD', '#4D8DF7', '#2E6FE3', '#43D6A3', '#FF6B7D'] as const;
+
+/** Screen readers announced six identical unnamed buttons without these. */
+export const PALETTE_NAMES: Record<(typeof PALETTE)[number], string> = {
+  '#E8EEF9': 'white',
+  '#C6CFDD': 'silver',
+  '#4D8DF7': 'blue',
+  '#2E6FE3': 'deep blue',
+  '#43D6A3': 'green',
+  '#FF6B7D': 'red',
+};

@@ -1,7 +1,7 @@
 // features/games/index.ts — the ONE games feature: engine + four games.
 // Public surface only; slices outside never reach inside.
 export { useGame } from './engine/runtime';
-export { listActiveSessions } from './engine/session';
+export { listActiveSessions, abandonSession } from './engine/session';
 export { SeqBuffer } from './engine/buffer';
 export { fold, nextSeq, canMove } from './engine/fold';
 export type { GameRules, MoveEnvelope, Outcome, UserId } from './engine/types';

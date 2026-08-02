@@ -1,54 +1,47 @@
 // features/settings/ui/SettingsScreen.tsx — nicknames, anniversary, toggles,
 // PIN + biometric, full export (§7.17).
-import { useState } from 'react';
-import { View, TextInput, ScrollView, Switch } from 'react-native';
-import { Text, Card, Button } from '../../../ui';
+import { useState, type ReactNode } from 'react';
+import { View, ScrollView, Switch } from 'react-native';
+import { Text, Card, Button, Input, Icon } from '../../../ui';
 import { colors, spacing } from '../../../theme/theme';
-import { useSession } from '../../../lib/session/store';
+import { useSession, usePartnerName } from '../../../lib/session/store';
 import { closeBus } from '../../../lib/sync/bus';
+import { pauseOutbox, resumeOutbox } from '../../../lib/sync/outbox';
 import { signOut } from '../api';
 import { usePrefs, useTogglePref, useSaveProfile, useAppLock, useExport } from '../hooks';
 import { PREF_KEYS, validAnniversary, exportFileName } from '../model';
 
+/** An overline label over a card — the whole screen is one long list, and
+ *  without section headers every row reads at the same weight. */
+function Section({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <View style={{ gap: spacing.sm }}>
+      <Text variant="overline" color={colors.muted} style={{ textTransform: 'uppercase' }}>
+        {label}
+      </Text>
+      {children}
+    </View>
+  );
+}
+
 function NamesCard() {
   const me = useSession((s) => s.me);
+  const partnerName = usePartnerName();
   const { saveNames } = useSaveProfile();
   const [displayName, setDisplayName] = useState(me?.display_name ?? '');
   const [nickname, setNickname] = useState(me?.nickname ?? '');
   const [saved, setSaved] = useState(false);
 
   return (
-    <Card style={{ marginBottom: spacing.lg }}>
-      <Text variant="small" color={colors.muted} style={{ marginBottom: spacing.sm }}>
+    <Card style={{ gap: spacing.md }}>
+      <Text variant="small" color={colors.muted}>
         what you are called here
       </Text>
-      <TextInput
-        placeholder="your name"
-        placeholderTextColor={colors.muted}
-        value={displayName}
-        onChangeText={setDisplayName}
-        style={{
-          color: colors.ink,
-          borderBottomWidth: 1,
-          borderColor: colors.line,
-          paddingVertical: spacing.sm,
-          marginBottom: spacing.sm,
-          fontSize: 15,
-        }}
-      />
-      <TextInput
-        placeholder="what she calls you"
-        placeholderTextColor={colors.muted}
+      <Input placeholder="your name" value={displayName} onChangeText={setDisplayName} />
+      <Input
+        placeholder={`what ${partnerName} calls you`}
         value={nickname}
         onChangeText={setNickname}
-        style={{
-          color: colors.ink,
-          borderBottomWidth: 1,
-          borderColor: colors.line,
-          paddingVertical: spacing.sm,
-          marginBottom: spacing.md,
-          fontSize: 15,
-        }}
       />
       <Button
         label={saved ? 'saved ♥' : 'save names'}
@@ -73,33 +66,21 @@ function AnniversaryCard() {
   const [error, setError] = useState<string | null>(null);
 
   return (
-    <Card style={{ marginBottom: spacing.lg }}>
-      <Text variant="small" color={colors.muted} style={{ marginBottom: spacing.sm }}>
+    <Card style={{ gap: spacing.md }}>
+      <Text variant="small" color={colors.muted}>
         the day it started — this powers the home counter
       </Text>
-      <TextInput
+      <Input
         placeholder="YYYY-MM-DD"
-        placeholderTextColor={colors.muted}
         value={date}
         onChangeText={setDate}
         autoCapitalize="none"
-        style={{
-          color: colors.ink,
-          borderBottomWidth: 1,
-          borderColor: colors.line,
-          paddingVertical: spacing.sm,
-          marginBottom: spacing.md,
-          fontSize: 15,
-        }}
+        error={error}
       />
-      {error ? (
-        <Text variant="small" color={colors.rose} style={{ marginBottom: spacing.sm }}>
-          {error}
-        </Text>
-      ) : null}
       <Button
         label="set our day"
         tone="ghost"
+        icon="calendar"
         disabled={!coupleId || !date}
         onPress={() => {
           if (!validAnniversary(date)) {
@@ -120,11 +101,11 @@ function TogglesCard() {
   const row = prefs.data ?? null;
 
   return (
-    <Card style={{ marginBottom: spacing.lg }}>
-      <Text variant="small" color={colors.muted} style={{ marginBottom: spacing.md }}>
+    <Card>
+      <Text variant="small" color={colors.muted} style={{ marginBottom: spacing.sm }}>
         which pings may reach your phone
       </Text>
-      {PREF_KEYS.map((p) => {
+      {PREF_KEYS.map((p, i) => {
         const on = ((row?.prefs ?? {}) as Record<string, boolean>)[p.key] !== false;
         return (
           <View
@@ -133,14 +114,17 @@ function TogglesCard() {
               flexDirection: 'row',
               justifyContent: 'space-between',
               alignItems: 'center',
-              paddingVertical: spacing.sm,
+              paddingVertical: spacing.md,
+              borderTopWidth: i === 0 ? 0 : 3,
+              borderTopColor: colors.line,
             }}
           >
             <Text variant="body">{p.label}</Text>
             <Switch
               value={on}
               onValueChange={(v) => void toggle(p.key, v)}
-              trackColor={{ false: colors.line, true: colors.roseDeep }}
+              accessibilityLabel={p.label}
+              trackColor={{ false: colors.line, true: colors.blueDeep }}
               thumbColor={colors.ink}
             />
           </View>
@@ -156,39 +140,37 @@ function LockCard() {
   const [set, setDone] = useState(false);
 
   return (
-    <Card style={{ marginBottom: spacing.lg }}>
-      <Text variant="small" color={colors.muted} style={{ marginBottom: spacing.sm }}>
+    <Card style={{ gap: spacing.md }}>
+      <Text variant="small" color={colors.muted}>
         the heart-lock — {lock.biometricsAvailable ? 'face/fingerprint + your PIN' : 'a PIN only your two phones know'}
       </Text>
       {lock.configured ? (
-        <Text variant="small" color={colors.rose}>
-          {set ? 'PIN updated ♥' : 'the lock is on — the app locks whenever it leaves the screen'}
-        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+          <Icon
+            name={set ? 'check' : 'lock'}
+            size={spacing.lg}
+            color={set ? colors.success : colors.blue}
+          />
+          <Text variant="small" color={set ? colors.success : colors.blue} style={{ flex: 1 }}>
+            {set ? 'PIN updated ♥' : 'the lock is on — the app locks whenever it leaves the screen'}
+          </Text>
+        </View>
       ) : (
-        <Text variant="caption" color={colors.muted} style={{ marginBottom: spacing.sm }}>
+        <Text variant="caption" color={colors.muted}>
           set a 4-6 digit PIN; biometrics unlock it when your phone has them
         </Text>
       )}
-      <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.sm }}>
-        <TextInput
-          placeholder={lock.configured ? 'new PIN' : 'choose a PIN'}
-          placeholderTextColor={colors.muted}
-          value={pin}
-          onChangeText={setPin}
-          keyboardType="number-pad"
-          secureTextEntry
-          maxLength={6}
-          style={{
-            flex: 1,
-            color: colors.ink,
-            borderBottomWidth: 1,
-            borderColor: colors.line,
-            paddingVertical: spacing.sm,
-            fontSize: 17,
-            letterSpacing: 4,
-            marginRight: spacing.md,
-          }}
-        />
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+        <View style={{ flex: 1 }}>
+          <Input
+            placeholder={lock.configured ? 'new PIN' : 'choose a PIN'}
+            value={pin}
+            onChangeText={setPin}
+            keyboardType="number-pad"
+            secureTextEntry
+            maxLength={6}
+          />
+        </View>
         <Button
           label={lock.configured ? 'change' : 'set'}
           tone="ghost"
@@ -210,48 +192,90 @@ function ExportCard() {
   const { run, busy, error, savedTo } = useExport();
 
   return (
-    <Card style={{ marginBottom: spacing.lg }}>
-      <Text variant="small" color={colors.muted} style={{ marginBottom: spacing.sm }}>
+    <Card style={{ gap: spacing.md }}>
+      <Text variant="small" color={colors.muted}>
         everything, in your hands — moods, letters, journal, games, all of it ({exportFileName()}).
         you pick the folder; the file lands there.
       </Text>
       {error ? (
-        <Text variant="small" color={colors.rose} style={{ marginBottom: spacing.sm }}>
-          {error}
-        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+          <Icon name="alert" size={spacing.lg} color={colors.danger} />
+          <Text
+            variant="small"
+            color={colors.danger}
+            accessibilityLiveRegion="polite"
+            style={{ flex: 1 }}
+          >
+            {error}
+          </Text>
+        </View>
       ) : null}
       {savedTo ? (
-        <Text variant="small" color={colors.rose} style={{ marginBottom: spacing.sm }}>
-          saved as {savedTo} ♥
-        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+          <Icon name="check" size={spacing.lg} color={colors.success} />
+          <Text
+            variant="small"
+            color={colors.success}
+            accessibilityLiveRegion="polite"
+            style={{ flex: 1 }}
+          >
+            saved as {savedTo} ♥
+          </Text>
+        </View>
       ) : null}
-      <Button label={busy ? 'gathering us up…' : 'export everything'} tone="gold" disabled={busy} onPress={() => void run()} />
+      <Button
+        label={busy ? 'gathering us up…' : 'export everything'}
+        tone="secondary"
+        loading={busy}
+        disabled={busy}
+        onPress={() => void run()}
+      />
     </Card>
   );
 }
 
 export function SettingsScreen() {
   const onSignOut = async () => {
+    pauseOutbox(); // queued writes must not flush unauthenticated (they'd 42501 and be deleted)
     const res = await signOut();
     if (res.ok) {
       closeBus();
       useSession.getState().reset();
+    } else {
+      resumeOutbox();
     }
   };
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: colors.bg }} contentContainerStyle={{ padding: spacing.xl }}>
-      <Text variant="title" style={{ marginBottom: spacing.xl }}>
+    <ScrollView
+      style={{ flex: 1, backgroundColor: colors.bg }}
+      contentContainerStyle={{
+        paddingHorizontal: spacing.xl,
+        paddingTop: spacing.xl,
+        paddingBottom: spacing.huge,
+        gap: spacing.xl,
+      }}
+    >
+      <Text variant="display" style={{ marginBottom: spacing.sm }}>
         settings
       </Text>
-      <NamesCard />
-      <AnniversaryCard />
-      <TogglesCard />
-      <LockCard />
-      <ExportCard />
-      <View style={{ marginTop: spacing.lg }}>
-        <Button label="sign out of this phone" tone="ghost" onPress={() => void onSignOut()} />
-      </View>
+      <Section label="names">
+        <NamesCard />
+      </Section>
+      <Section label="our day">
+        <AnniversaryCard />
+      </Section>
+      <Section label="pings">
+        <TogglesCard />
+      </Section>
+      <Section label="the lock">
+        <LockCard />
+      </Section>
+      <Section label="export">
+        <ExportCard />
+      </Section>
+      <View style={{ height: 1, backgroundColor: colors.line }} />
+      <Button label="sign out of this phone" tone="danger" onPress={() => void onSignOut()} />
     </ScrollView>
   );
 }

@@ -83,8 +83,8 @@ export function isLetterOpenable(
   }
 }
 
-export function feedLine(item: FeedItem, names: { me: string; her: string }, myId: string): string {
-  const who = item.authorId === myId ? 'you' : names.her;
+export function feedLine(item: FeedItem, partnerName: string, myId: string): string {
+  const who = item.authorId === myId ? 'you' : partnerName;
   switch (item.kind) {
     case 'mood':
       return `${who} felt ${item.mood}`;

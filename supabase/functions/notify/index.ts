@@ -20,7 +20,7 @@ type Payload = {
 const TITLES: Record<string, string> = {
   moods: 'a mood just for you',
   letters: 'a letter, sealed with a kiss',
-  voice_notes: 'her voice, waiting for you',
+  voice_notes: 'a voice note, waiting for you',
   photos: 'a new photo of us',
   game_moves: 'your move ♥',
 };

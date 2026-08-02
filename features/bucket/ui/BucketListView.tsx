@@ -1,7 +1,7 @@
 // features/bucket/ui/BucketListView.tsx — ideas, vote, done, random picker.
 import { useState } from 'react';
-import { View, TextInput, Pressable, ScrollView } from 'react-native';
-import { Text, Card, Button, Skeleton } from '../../../ui';
+import { View, Pressable, ScrollView } from 'react-native';
+import { Text, Card, Button, Input, Icon, SkeletonCard } from '../../../ui';
 import { colors, spacing, radius } from '../../../theme/theme';
 import { useBucketList, useBucketActions } from '../hooks';
 import { ranked, doneItems, hasVoted, voteCount, pickRandom, CATEGORIES } from '../model';
@@ -15,21 +15,34 @@ function ItemRow({ item, myId }: { item: BucketItemRow; myId: string }) {
   const votes = voteCount(item);
 
   return (
-    <Card style={{ marginBottom: spacing.sm }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-        <View style={{ flex: 1 }}>
-          <Text variant="body">{item.title}</Text>
+    <Card variant={votes === 2 ? 'accent' : 'quiet'} style={{ marginBottom: spacing.sm }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+        <View style={{ flex: 1, gap: spacing.xs }}>
+          <Text variant="heading">{item.title}</Text>
           <Text variant="caption" color={colors.muted}>
             {item.category} {votes > 0 ? `· ${votes === 2 ? 'both of you want this ♥' : 'one vote'}` : ''}
           </Text>
         </View>
-        <Pressable onPress={() => void vote(item, !voted)} style={{ padding: spacing.sm }}>
-          <Text variant="title">{voted ? '♥️' : '🤍'}</Text>
-        </Pressable>
-        <Pressable onPress={() => void markDone(item, null)} style={{ padding: spacing.sm }}>
-          <Text variant="title">✅</Text>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="vote for this"
+          accessibilityState={{ selected: voted }}
+          onPress={() => void vote(item, !voted)}
+          style={{ padding: spacing.sm }}
+        >
+          <Icon name="heart" size={spacing.xl} color={voted ? colors.blue : colors.faint} />
         </Pressable>
         <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="cross it off"
+          onPress={() => void markDone(item, null)}
+          style={{ padding: spacing.sm }}
+        >
+          <Icon name="check" size={spacing.xl} color={colors.muted} />
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="remove it"
           onPress={() => {
             if (!armed) {
               setArmed(true);
@@ -40,9 +53,13 @@ function ItemRow({ item, myId }: { item: BucketItemRow; myId: string }) {
           }}
           style={{ padding: spacing.sm }}
         >
-          <Text variant="caption" color={armed ? colors.rose : colors.muted}>
-            {armed ? 'sure?' : '✕'}
-          </Text>
+          {armed ? (
+            <Text variant="caption" color={colors.danger}>
+              sure?
+            </Text>
+          ) : (
+            <Icon name="close" size={spacing.lg} color={colors.muted} />
+          )}
         </Pressable>
       </View>
     </Card>
@@ -60,9 +77,10 @@ export function BucketListView() {
 
   if (list.isLoading) {
     return (
-      <View style={{ padding: spacing.lg }}>
-        <Skeleton height={64} style={{ marginBottom: spacing.sm }} />
-        <Skeleton height={64} />
+      <View style={{ padding: spacing.lg, gap: spacing.sm }}>
+        <SkeletonCard lines={2} />
+        <SkeletonCard lines={1} />
+        <SkeletonCard lines={1} />
       </View>
     );
   }
@@ -70,8 +88,9 @@ export function BucketListView() {
   if (list.error && !list.data) {
     return (
       <View style={{ padding: spacing.lg }}>
-        <Card>
-          <Text variant="small" color={colors.rose}>
+        <Card variant="danger" style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+          <Icon name="alert" size={spacing.xl} color={colors.danger} />
+          <Text variant="small" color={colors.danger} style={{ flex: 1 }}>
             the list would not load — pull down to try again
           </Text>
         </Card>
@@ -84,51 +103,47 @@ export function BucketListView() {
   const done = doneItems(rows);
 
   return (
-    <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: spacing.lg }}>
-      <Card style={{ marginBottom: spacing.lg }}>
-        <TextInput
-          placeholder="one day, together, we should…"
-          placeholderTextColor={colors.muted}
-          value={title}
-          onChangeText={setTitle}
-          style={{
-            color: colors.ink,
-            fontSize: 15,
-            borderBottomWidth: 1,
-            borderColor: colors.line,
-            paddingVertical: spacing.sm,
-            marginBottom: spacing.md,
-          }}
-        />
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: spacing.md }}>
-          {CATEGORIES.map((c) => (
-            <Pressable key={c} onPress={() => setCategory(c)} style={{ margin: spacing.xs }}>
-              <View
-                style={{
-                  borderWidth: 1,
-                  borderColor: category === c ? colors.rose : colors.line,
-                  borderRadius: radius.lg,
-                  paddingVertical: spacing.xs,
-                  paddingHorizontal: spacing.sm,
-                }}
+    <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: spacing.lg, paddingBottom: spacing.xxl }}>
+      <Card style={{ marginBottom: spacing.xl, gap: spacing.lg }}>
+        <Input placeholder="one day, together, we should…" value={title} onChangeText={setTitle} />
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
+          {CATEGORIES.map((c) => {
+            const active = category === c;
+            return (
+              <Pressable
+                key={c}
+                accessibilityRole="button"
+                accessibilityState={{ selected: active }}
+                onPress={() => setCategory(c)}
               >
-                <Text variant="caption" color={category === c ? colors.rose : colors.muted}>
-                  {c}
-                </Text>
-              </View>
-            </Pressable>
-          ))}
+                <View
+                  style={{
+                    borderWidth: 3,
+                    borderColor: active ? colors.blue : colors.line,
+                    backgroundColor: active ? colors.blueSoft : 'transparent',
+                    borderRadius: radius.pill,
+                    paddingVertical: spacing.sm,
+                    paddingHorizontal: spacing.md,
+                  }}
+                >
+                  <Text variant="caption" color={active ? colors.blue : colors.muted}>
+                    {c}
+                  </Text>
+                </View>
+              </Pressable>
+            );
+          })}
         </View>
-        <Button label="put it on the list" haptic="medium" disabled={!title.trim()} onPress={() => void add(title, category).then(() => setTitle(''))} />
+        <Button
+          label="put it on the list"
+          haptic="medium"
+          disabled={!title.trim()}
+          onPress={() => void add(title, category).then(() => setTitle(''))}
+        />
       </Card>
 
-      <View style={{ flexDirection: 'row', justifyContent: 'center', marginBottom: spacing.md }}>
-        <Button
-          label="🎲 pick for us"
-          tone="gold"
-          onPress={() => setPicked(pickRandom(rows))}
-          style={{ marginRight: spacing.sm }}
-        />
+      <View style={{ flexDirection: 'row', justifyContent: 'center', gap: spacing.sm, marginBottom: spacing.xl }}>
+        <Button label="pick for us" tone="secondary" icon="sparkle" onPress={() => setPicked(pickRandom(rows))} />
         <Button
           label={tab === 'open' ? `done (${done.length})` : `open (${open.length})`}
           tone="ghost"
@@ -137,21 +152,28 @@ export function BucketListView() {
       </View>
 
       {picked ? (
-        <Card style={{ marginBottom: spacing.lg, borderColor: colors.gold }}>
-          <Text variant="caption" color={colors.gold} style={{ marginBottom: spacing.xs }}>
+        <Card variant="accent" style={{ marginBottom: spacing.xl, gap: spacing.md }}>
+          <Text variant="overline" color={colors.blue} style={{ textTransform: 'uppercase' }}>
             fate says:
           </Text>
           <Text variant="title">{picked.title}</Text>
-          <View style={{ marginTop: spacing.md }}>
-            <Button label="sounds perfect" tone="ghost" onPress={() => setPicked(null)} />
-          </View>
+          <Button label="sounds perfect" tone="ghost" onPress={() => setPicked(null)} />
         </Card>
       ) : null}
 
+      <Text
+        variant="overline"
+        color={colors.muted}
+        style={{ marginBottom: spacing.md, textTransform: 'uppercase' }}
+      >
+        {tab === 'open' ? 'open' : 'done'}
+      </Text>
+
       {tab === 'open' ? (
         open.length === 0 ? (
-          <Card>
-            <Text variant="small" color={colors.muted}>
+          <Card style={{ alignItems: 'center', gap: spacing.md, paddingVertical: spacing.xl }}>
+            <Icon name="sparkle" size={spacing.xxl} color={colors.muted} />
+            <Text variant="small" color={colors.muted} style={{ textAlign: 'center' }}>
               the list is empty — dream something up together and put it here.
             </Text>
           </Card>
@@ -159,15 +181,16 @@ export function BucketListView() {
           open.map((item) => <ItemRow key={item.id} item={item} myId={myId} />)
         )
       ) : done.length === 0 ? (
-        <Card>
-          <Text variant="small" color={colors.muted}>
+        <Card style={{ alignItems: 'center', gap: spacing.md, paddingVertical: spacing.xl }}>
+          <Icon name="check" size={spacing.xxl} color={colors.muted} />
+          <Text variant="small" color={colors.muted} style={{ textAlign: 'center' }}>
             nothing crossed off yet — the first ✅ will feel so good.
           </Text>
         </Card>
       ) : (
         done.map((item) => (
-          <Card key={item.id} style={{ marginBottom: spacing.sm, opacity: 0.75 }}>
-            <Text variant="body" style={{ textDecorationLine: 'line-through' }}>
+          <Card key={item.id} variant="quiet" style={{ marginBottom: spacing.sm, gap: spacing.xs }}>
+            <Text variant="body" color={colors.muted} style={{ textDecorationLine: 'line-through' }}>
               {item.title}
             </Text>
             <Text variant="caption" color={colors.muted}>

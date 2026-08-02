@@ -14,8 +14,12 @@ export type CompanionState = {
 };
 
 export function useCompanion(): CompanionState {
-  const me = useSession((s) => s.me?.display_name || 'Scotty');
-  const her = useSession((s) => s.partner?.display_name || 'Annsleigh');
+  // Raw names, not usePartnerName(): its "your person" fallback is written to
+  // be read on screen, and these get interpolated into the model's system
+  // prompt instead ("…app for X and Y"). Blank means "unknown" — the edge
+  // function supplies wording that fits that sentence.
+  const me = useSession((s) => s.me?.nickname || s.me?.display_name || '');
+  const partner = useSession((s) => s.partner?.nickname || s.partner?.display_name || '');
   const coupleId = useSession((s) => s.coupleId);
   const [text, setText] = useState('');
   const [streaming, setStreaming] = useState(false);
@@ -37,12 +41,12 @@ export function useCompanion(): CompanionState {
           const built = await buildRecapContext(coupleId);
           if (built.ok) ctx = built.data;
         }
-        const res = await streamCompanion(mode, ctx, { me, her }, setText, controller.signal);
+        const res = await streamCompanion(mode, ctx, { me, partner }, setText, controller.signal);
         setStreaming(false);
         if (!res.ok && res.error.message !== 'stopped mid-thought') setError(res.error.message);
       })();
     },
-    [me, her, coupleId],
+    [me, partner, coupleId],
   );
 
   const stop = useCallback(() => {

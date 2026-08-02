@@ -1,5 +1,8 @@
 // features/letters/ui/WaxSeal.tsx — the seal break moment (§7.5):
 // unfold + wax crack + success haptic. Springs only, never linear.
+//
+// The one place in the app where a little drama is correct: a silver seal on
+// blue-black glass, lit from behind, that cracks and throws the letter open.
 import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import Animated, {
@@ -10,8 +13,11 @@ import Animated, {
   withTiming,
   interpolate,
 } from 'react-native-reanimated';
-import { Text, Button } from '../../../ui';
-import { colors, spacing, radius, motion } from '../../../theme/theme';
+import { Text, Button, Card } from '../../../ui';
+import { colors, spacing, radius, motion, elevation } from '../../../theme/theme';
+
+const SEAL = spacing.huge * 2; // 96 — the disc, sized off the spacing ramp
+const HALO = SEAL + spacing.xl; // the light behind it
 
 export function WaxSeal({
   label,
@@ -56,52 +62,76 @@ export function WaxSeal({
 
   if (!broken) {
     return (
-      <View style={{ alignItems: 'center', padding: spacing.huge }}>
+      <View style={{ alignItems: 'center', paddingVertical: spacing.huge, paddingHorizontal: spacing.xl }}>
         <Animated.View style={sealStyle}>
           <View
             style={{
-              width: 96,
-              height: 96,
-              borderRadius: 48,
-              backgroundColor: colors.roseDeep,
+              width: HALO,
+              height: HALO,
+              borderRadius: radius.pill,
+              backgroundColor: colors.blueSoft,
               alignItems: 'center',
               justifyContent: 'center',
-              borderWidth: 3,
-              borderColor: colors.rose,
-              marginBottom: spacing.xl,
+              marginBottom: spacing.xxl,
             }}
           >
-            <Text variant="display" color={colors.ink}>
-              ♥
-            </Text>
+            <View
+              style={[
+                {
+                  width: SEAL,
+                  height: SEAL,
+                  borderRadius: radius.pill,
+                  backgroundColor: colors.surfaceAlt,
+                  borderWidth: 3,
+                  borderColor: colors.silver,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                },
+                elevation.card,
+              ]}
+            >
+              {/* the struck ring inside the wax */}
+              <View
+                pointerEvents="none"
+                style={{
+                  position: 'absolute',
+                  top: spacing.sm,
+                  left: spacing.sm,
+                  right: spacing.sm,
+                  bottom: spacing.sm,
+                  borderRadius: radius.pill,
+                  borderWidth: 3,
+                  borderColor: colors.lineBright,
+                }}
+              />
+              <Text variant="display" color={colors.silver}>
+                ♥
+              </Text>
+            </View>
           </View>
         </Animated.View>
-        <Text variant="title" style={{ marginBottom: spacing.sm, textAlign: 'center' }}>
+        <Text variant="title" style={{ marginBottom: spacing.md, textAlign: 'center' }}>
           {label}
         </Text>
         <Text variant="small" color={colors.muted} style={{ marginBottom: spacing.xl, textAlign: 'center' }}>
           this one is for you. break the seal when you are ready.
         </Text>
-        <Button label="break the seal" haptic="success" onPress={() => void breakSeal()} />
+        <Button
+          label="break the seal"
+          tone="primary"
+          size="lg"
+          haptic="success"
+          onPress={() => void breakSeal()}
+        />
       </View>
     );
   }
 
   return (
-    <Animated.View
-      style={[
-        {
-          backgroundColor: colors.surfaceAlt,
-          borderRadius: radius.md,
-          borderWidth: 1,
-          borderColor: colors.line,
-          padding: spacing.xl,
-          margin: spacing.lg,
-        },
-        letterStyle,
-      ]}
-    >
-      {children}
+    <Animated.View style={letterStyle}>
+      <Card variant="raised" style={{ padding: spacing.xl, margin: spacing.lg }}>
+        {children}
+      </Card>
     </Animated.View>
   );
 }

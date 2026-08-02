@@ -112,6 +112,23 @@ export async function finishSession(
     .eq('id', sessionId);
 }
 
+/** Put a game away: it leaves "games in progress" without losing anything.
+ *  status is already part of the contract ('active'|'finished'|'abandoned') and
+ *  listActiveSessions only ever asks for 'active', so this is a soft retire —
+ *  a hard delete would cascade game_moves and take the history with it. */
+export async function abandonSession(sessionId: string): Promise<Result<null>> {
+  try {
+    const res = await supabase
+      .from('game_sessions')
+      .update({ status: 'abandoned' })
+      .eq('id', sessionId);
+    if (res.error) return err(toAppError(res.error, 'could not put that game away'));
+    return ok(null);
+  } catch (e) {
+    return err(toAppError(e, 'could not put that game away'));
+  }
+}
+
 export async function listActiveSessions(coupleId: string): Promise<Result<GameSessionRow[]>> {
   try {
     const res = await supabase

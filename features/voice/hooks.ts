@@ -99,7 +99,7 @@ export function useRecorder() {
 
       const uploaded = await uploadAudio(storagePath, uri);
       if (!uploaded.ok) {
-        setError('your voice note did not reach her — try again on wifi');
+        setError('your voice note did not get through — try again on wifi');
         return false;
       }
 

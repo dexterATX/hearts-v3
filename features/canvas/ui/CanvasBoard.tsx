@@ -7,7 +7,7 @@ import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-g
 import { scheduleOnRN } from 'react-native-worklets';
 import { Text, Button } from '../../../ui';
 import { colors, spacing, radius } from '../../../theme/theme';
-import { simplify, BRUSHES, PALETTE, type Stroke, type Point } from '../model';
+import { simplify, BRUSHES, PALETTE, PALETTE_NAMES, type Stroke, type Point } from '../model';
 import { useCanvas, useReplay } from '../hooks';
 
 function StrokeDots({ stroke }: { stroke: Stroke }) {
@@ -70,55 +70,104 @@ export function CanvasBoard() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.bg }}>
-      <View style={{ flexDirection: 'row', justifyContent: 'center', padding: spacing.sm }}>
-        {PALETTE.map((c) => (
-          <Pressable key={c} onPress={() => setColor(c)} style={{ margin: spacing.xs }}>
-            <View
-              style={{
-                width: 28,
-                height: 28,
-                borderRadius: 14,
-                backgroundColor: c,
-                borderWidth: color === c ? 3 : 1,
-                borderColor: color === c ? colors.ink : colors.line,
-              }}
-            />
-          </Pressable>
-        ))}
-      </View>
-      <View style={{ flexDirection: 'row', justifyContent: 'center', paddingBottom: spacing.sm }}>
-        {BRUSHES.map((b) => (
-          <Pressable key={b.name} onPress={() => setBrush(b)} style={{ margin: spacing.xs }}>
-            <View
-              style={{
-                borderWidth: 1,
-                borderColor: brush.name === b.name ? colors.rose : colors.line,
-                borderRadius: radius.lg,
-                paddingVertical: spacing.xs,
-                paddingHorizontal: spacing.md,
-              }}
+      {/* toolbar: swatches, then brush weight + replay */}
+      <View
+        style={{
+          flexDirection: 'row',
+          justifyContent: 'center',
+          flexWrap: 'wrap',
+          gap: spacing.sm,
+          paddingHorizontal: spacing.lg,
+          paddingTop: spacing.lg,
+        }}
+      >
+        {PALETTE.map((c) => {
+          const active = color === c;
+          return (
+            <Pressable
+              key={c}
+              accessibilityRole="button"
+              accessibilityLabel={PALETTE_NAMES[c]}
+              accessibilityState={{ selected: active }}
+              onPress={() => setColor(c)}
             >
-              <Text variant="caption" color={brush.name === b.name ? colors.rose : colors.muted}>
-                {b.name}
-              </Text>
-            </View>
-          </Pressable>
-        ))}
-        <Pressable onPress={replay.play} style={{ margin: spacing.xs }}>
-          <View
-            style={{
-              borderWidth: 1,
-              borderColor: colors.gold,
-              borderRadius: radius.lg,
-              paddingVertical: spacing.xs,
-              paddingHorizontal: spacing.md,
-            }}
-          >
-            <Text variant="caption" color={colors.gold}>
-              ▶ replay
-            </Text>
-          </View>
-        </Pressable>
+              {/* the selection ring sits OUTSIDE the swatch, so picking a
+                  colour never changes the colour you are looking at */}
+              <View
+                style={{
+                  padding: spacing.xs,
+                  borderRadius: radius.pill,
+                  borderWidth: 3,
+                  borderColor: active ? colors.blue : 'transparent',
+                  backgroundColor: active ? colors.blueSoft : 'transparent',
+                }}
+              >
+                <View
+                  style={{
+                    width: spacing.xxl,
+                    height: spacing.xxl,
+                    borderRadius: radius.pill,
+                    backgroundColor: c,
+                    borderWidth: 3,
+                    borderColor: colors.line,
+                  }}
+                />
+              </View>
+            </Pressable>
+          );
+        })}
+      </View>
+
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexWrap: 'wrap',
+          gap: spacing.sm,
+          paddingHorizontal: spacing.lg,
+          paddingTop: spacing.lg,
+        }}
+      >
+        {BRUSHES.map((b) => {
+          const active = brush.name === b.name;
+          return (
+            <Pressable
+              key={b.name}
+              accessibilityRole="button"
+              accessibilityState={{ selected: active }}
+              onPress={() => setBrush(b)}
+            >
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: spacing.sm,
+                  borderWidth: 3,
+                  borderColor: active ? colors.blue : colors.line,
+                  backgroundColor: active ? colors.blueSoft : 'transparent',
+                  borderRadius: radius.pill,
+                  paddingVertical: spacing.sm,
+                  paddingHorizontal: spacing.md,
+                }}
+              >
+                {/* the dot IS the brush weight — read it without reading it */}
+                <View
+                  style={{
+                    width: b.width,
+                    height: b.width,
+                    borderRadius: radius.pill,
+                    backgroundColor: active ? colors.blue : colors.muted,
+                  }}
+                />
+                <Text variant="caption" color={active ? colors.blue : colors.muted}>
+                  {b.name}
+                </Text>
+              </View>
+            </Pressable>
+          );
+        })}
+        <Button label="replay" tone="ghost" onPress={replay.play} />
       </View>
 
       <GestureDetector gesture={pan}>
@@ -128,7 +177,7 @@ export function CanvasBoard() {
             margin: spacing.lg,
             backgroundColor: colors.surface,
             borderRadius: radius.md,
-            borderWidth: 1,
+            borderWidth: 3,
             borderColor: colors.line,
             overflow: 'hidden',
           }}
@@ -144,8 +193,8 @@ export function CanvasBoard() {
         </View>
       </GestureDetector>
 
-      <View style={{ padding: spacing.lg }}>
-        <Button label="wipe it clean, start over" tone="ghost" onPress={() => void clear()} />
+      <View style={{ paddingHorizontal: spacing.lg, paddingBottom: spacing.xl }}>
+        <Button label="wipe it clean, start over" tone="danger" onPress={() => void clear()} />
       </View>
     </GestureHandlerRootView>
   );

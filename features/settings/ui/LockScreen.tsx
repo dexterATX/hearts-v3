@@ -1,8 +1,8 @@
 // features/settings/ui/LockScreen.tsx — the opaque lock overlay (§7.17).
 // Rendered above everything while locked; biometrics first, PIN fallback.
 import { useEffect, useState } from 'react';
-import { View, TextInput } from 'react-native';
-import { Text, Button } from '../../../ui';
+import { View } from 'react-native';
+import { Text, Button, Card, Input, Icon } from '../../../ui';
 import { colors, spacing, radius } from '../../../theme/theme';
 import { useAppLock } from '../hooks';
 import { LOCKOUT_AFTER } from '../model';
@@ -39,56 +39,75 @@ export function LockScreen() {
         zIndex: 999,
       }}
     >
-      <Text variant="display" style={{ marginBottom: spacing.md }}>
-        ♥️
-      </Text>
-      <Text variant="title" style={{ marginBottom: spacing.xxl }}>
-        hearts is locked
-      </Text>
-
-      {lock.lockedOut ? (
-        <Text variant="body" color={colors.rose} style={{ textAlign: 'center' }}>
-          too many wrong tries — use your face or fingerprint to get back in
-        </Text>
-      ) : lock.cooldownUntil ? (
-        <CooldownMessage until={lock.cooldownUntil} />
-      ) : (
-        <>
-          <TextInput
-            placeholder="your PIN"
-            placeholderTextColor={colors.muted}
-            value={pin}
-            onChangeText={setPin}
-            keyboardType="number-pad"
-            secureTextEntry
-            maxLength={6}
+      <View style={{ width: '100%', alignItems: 'center', gap: spacing.xl }}>
+        <View style={{ alignItems: 'center', gap: spacing.lg }}>
+          <View
             style={{
-              color: colors.ink,
-              fontSize: 24,
-              letterSpacing: 8,
-              textAlign: 'center',
-              borderWidth: 1,
-              borderColor: colors.line,
-              borderRadius: radius.md,
-              padding: spacing.md,
-              width: 200,
-              marginBottom: spacing.lg,
+              width: spacing.huge,
+              height: spacing.huge,
+              borderRadius: radius.pill,
+              backgroundColor: colors.blueSoft,
+              borderWidth: 3,
+              borderColor: colors.blue,
+              alignItems: 'center',
+              justifyContent: 'center',
             }}
-          />
-          {wrong ? (
-            <Text variant="small" color={colors.rose} style={{ marginBottom: spacing.md }}>
-              not quite — {LOCKOUT_AFTER - lock.fails} tries left
-            </Text>
-          ) : null}
-          <Button label="unlock" haptic="medium" disabled={pin.length < 4} onPress={() => void tryPin()} />
-        </>
-      )}
-
-      {lock.biometricsAvailable ? (
-        <View style={{ marginTop: spacing.lg }}>
-          <Button label="use face / fingerprint" tone="ghost" onPress={() => void lock.unlockWithBiometrics()} />
+          >
+            <Icon name="lock" color={colors.blue} />
+          </View>
+          <Text variant="display" style={{ textAlign: 'center' }}>
+            hearts is locked
+          </Text>
         </View>
-      ) : null}
+
+        {lock.lockedOut ? (
+          <Card
+            variant="danger"
+            style={{ alignSelf: 'stretch', flexDirection: 'row', alignItems: 'center', gap: spacing.md }}
+          >
+            <Icon name="alert" size={spacing.xl} color={colors.danger} />
+            <Text
+              variant="small"
+              color={colors.danger}
+              accessibilityLiveRegion="polite"
+              style={{ flex: 1 }}
+            >
+              too many wrong tries — use your face or fingerprint to get back in
+            </Text>
+          </Card>
+        ) : lock.cooldownUntil ? (
+          <CooldownMessage until={lock.cooldownUntil} />
+        ) : (
+          <View style={{ alignSelf: 'stretch', gap: spacing.lg }}>
+            <Input
+              code
+              placeholder="your PIN"
+              value={pin}
+              onChangeText={setPin}
+              keyboardType="number-pad"
+              secureTextEntry
+              maxLength={6}
+              error={wrong ? `not quite — ${LOCKOUT_AFTER - lock.fails} tries left` : null}
+            />
+            <Button
+              label="unlock"
+              size="lg"
+              haptic="medium"
+              disabled={pin.length < 4}
+              onPress={() => void tryPin()}
+            />
+          </View>
+        )}
+
+        {lock.biometricsAvailable ? (
+          <Button
+            label="use face / fingerprint"
+            tone="ghost"
+            onPress={() => void lock.unlockWithBiometrics()}
+            style={{ alignSelf: 'stretch' }}
+          />
+        ) : null}
+      </View>
     </View>
   );
 }
@@ -102,8 +121,15 @@ function CooldownMessage({ until }: { until: number }) {
   }, []);
   const secs = Math.max(0, Math.ceil((until - now) / 1000));
   return (
-    <Text variant="body" color={colors.gold} style={{ textAlign: 'center' }}>
-      take a breath — try again in {secs}s
-    </Text>
+    <Card variant="quiet" style={{ alignSelf: 'stretch' }}>
+      <Text
+        variant="body"
+        color={colors.silver}
+        accessibilityLiveRegion="polite"
+        style={{ textAlign: 'center' }}
+      >
+        take a breath — try again in {secs}s
+      </Text>
+    </Card>
   );
 }

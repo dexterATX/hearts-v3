@@ -5,7 +5,9 @@ export {
   useSendLetter,
   useOpenLetter,
   useLetterUnlocked,
+  useLetterBody,
 } from './hooks';
+export type { LetterListRow } from './api';
 export { isUnlocked, sealedReason, shelf, sealed, writtenBy } from './model';
 export { LetterCard } from './ui/LetterCard';
 export { WaxSeal } from './ui/WaxSeal';

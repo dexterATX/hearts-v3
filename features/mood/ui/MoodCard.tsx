@@ -1,4 +1,5 @@
 // features/mood/ui/MoodCard.tsx — her live mood on my home screen (§7.2).
+// The one highlighted thing on the page, so it takes the accent surface.
 import { Card, Text } from '../../../ui';
 import { colors, spacing } from '../../../theme/theme';
 import { moodMeta, latestPerAuthor } from '../model';
@@ -27,22 +28,21 @@ export function MoodCard({
   if (!latest) {
     return (
       <Card>
-        <Text variant="small" color={colors.muted}>
-          {partnerName} has not sent a mood yet — hers will land here the moment she taps one.
+        <Text variant="body" color={colors.muted}>
+          {partnerName} has not sent a mood yet — the first one lands here the moment they tap it.
         </Text>
       </Card>
     );
   }
   const meta = moodMeta(latest.mood);
   return (
-    <Card style={{ alignItems: 'center', paddingVertical: spacing.xl }}>
-      <Text variant="display" style={{ marginBottom: spacing.sm }}>
-        {meta.emoji}
-      </Text>
-      <Text variant="title" color={colors.rose}>
+    <Card variant="accent" style={{ alignItems: 'center', paddingVertical: spacing.xl, gap: spacing.sm }}>
+      {/* the mood emoji IS the content here — it stays */}
+      <Text variant="display">{meta.emoji}</Text>
+      <Text variant="title" color={colors.ink} style={{ textAlign: 'center' }}>
         {partnerName} feels {meta.label}
       </Text>
-      <Text variant="caption" color={colors.muted} style={{ marginTop: spacing.xs }}>
+      <Text variant="overline" color={colors.muted} style={{ textTransform: 'uppercase' }}>
         {timeAgo(latest.created_at)}
       </Text>
     </Card>

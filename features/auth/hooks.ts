@@ -3,6 +3,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../../lib/db/client';
 import { useSession } from '../../lib/session/store';
 import { initBus, closeBus } from '../../lib/sync/bus';
+import { pauseOutbox, resumeOutbox } from '../../lib/sync/outbox';
 import { initPresenceRecovery } from '../../lib/sync/presence';
 import { signIn, signOut, createCouple, joinCouple, loadProfiles, touchLastSeen } from './api';
 import type { Result } from '../../lib/result';
@@ -20,23 +21,37 @@ export function useAuthBootstrap(): void {
 
     async function hydrate(userId: string | null) {
       if (!userId) {
+        // stop the queue BEFORE clearing identity — a timer that fires after
+        // sign-out sends with the anon key and the 42501 destroys the op
+        pauseOutbox();
         reset();
         setHydrated(true);
         return;
       }
       setAuth(userId);
+      resumeOutbox();
       const meRes = await supabase.from('profiles').select('*').eq('id', userId).single();
       if (cancelled) return;
       if (meRes.error) {
-        // offline cold start: keep the PERSISTED session (couple, profiles)
-        // instead of wiping it to null and dumping a paired user on the
-        // pairing screen. The next reconnect/reconcile rehydrates.
-        setHydrated(true);
-        const persistedCouple = useSession.getState().coupleId;
-        if (persistedCouple) {
-          initBus(persistedCouple);
-          initPresenceRecovery();
+        // Offline cold start: keep the PERSISTED session (couple, profiles)
+        // rather than dumping a paired user on the pairing screen — the next
+        // reconnect rehydrates. BUT only for TRANSIENT failures. A definitive
+        // answer (PGRST116 = no such row, 42501 = RLS denies it) means the
+        // server does not agree we are paired; keeping the persisted couple
+        // then produced a phantom couple whose every write failed 42501 while
+        // the UI insisted it was paired.
+        const code = meRes.error.code;
+        if (code === 'PGRST116' || code === '42501') {
+          setCouple(null);
+          setProfiles(null, null);
+        } else {
+          const persistedCouple = useSession.getState().coupleId;
+          if (persistedCouple) {
+            initBus(persistedCouple);
+            initPresenceRecovery();
+          }
         }
+        setHydrated(true);
         return;
       }
       const coupleId = meRes.data?.couple_id ?? null;
@@ -151,10 +166,13 @@ export function usePairing(): {
   );
 
   const leave = useCallback(async () => {
+    pauseOutbox(); // before signOut: queued ops must not flush unauthenticated
     const res = await signOut();
     if (res.ok) {
       closeBus();
       useSession.getState().reset();
+    } else {
+      resumeOutbox(); // sign-out failed, we are still authenticated
     }
     return res;
   }, []);

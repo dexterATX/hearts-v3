@@ -55,7 +55,7 @@ export async function buildRecapContext(coupleId: string): Promise<Result<string
 export async function streamCompanion(
   mode: CompanionMode,
   context: string,
-  names: { me: string; her: string },
+  names: { me: string; partner: string },
   onDelta: (fullText: string) => void,
   signal?: AbortSignal,
 ): Promise<Result<string>> {

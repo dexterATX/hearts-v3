@@ -87,7 +87,10 @@ npm run typecheck      # tsc --noEmit, strict
 ## House rules kept everywhere
 
 - Every async path has a loading AND an error state; every list has an empty
-  state written in Scotty's voice to her.
+  state written in the house voice.
+- Copy is written for whoever is holding the phone: the reader is always "you",
+  the other person is always `usePartnerName()`. No string may assume which of
+  the two is reading it, so no gendered pronouns anywhere in the UI.
 - Every interactive element has a press spring and a haptic. Never a linear easing.
 - No screen ever says a user lost or failed; every game ending is affectionate
   on BOTH phones, and every game state has an exit.

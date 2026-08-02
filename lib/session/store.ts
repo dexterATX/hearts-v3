@@ -56,3 +56,17 @@ export const useSession = create<SessionState>()(
     },
   ),
 );
+
+/**
+ * What to call the other person, from the reader's side.
+ *
+ * Every screen renders for whoever is holding the phone, so no copy may say
+ * "her" or "him" — it says this name. The fallback has to stay grammatical in
+ * subject, possessive AND object position, because it lands in all three
+ * ("your person feels tender", "your person's sea", "leave your person a note").
+ * That is why it is not "them": "them's sea" and "them gets a daisy" are what
+ * the first pass shipped.
+ */
+export function usePartnerName(): string {
+  return useSession((s) => s.partner?.nickname || s.partner?.display_name || 'your person');
+}

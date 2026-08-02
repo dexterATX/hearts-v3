@@ -14,9 +14,9 @@ export async function fetchPartnerLastSeen(
       .eq('couple_id', coupleId)
       .neq('id', myId)
       .maybeSingle();
-    if (res.error) return err(toAppError(res.error, 'could not check when she was last here'));
+    if (res.error) return err(toAppError(res.error, 'could not check when they were last here'));
     return ok(res.data?.last_seen_at ?? null);
   } catch (e) {
-    return err(toAppError(e, 'could not check when she was last here'));
+    return err(toAppError(e, 'could not check when they were last here'));
   }
 }

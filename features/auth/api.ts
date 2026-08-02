@@ -4,18 +4,53 @@ import { ok, err, toAppError, type Result } from '../../lib/result';
 import type { ProfileRow } from '../../lib/db/database.types';
 import { generateInviteCode, normalizeInviteCode } from './model';
 
+/** Turn a signUp failure into something true and in-voice. Every failure used
+ *  to collapse into "that email or password did not work", so a rate-limit, a
+ *  disabled provider and an actual typo were indistinguishable — which sent a
+ *  real debugging session chasing the wrong thing. */
+function signUpMessage(e: { message?: string; status?: number }): string {
+  const m = (e.message ?? '').toLowerCase();
+  if (e.status === 429 || m.includes('rate limit') || m.includes('too many')) {
+    return 'too many tries just now — wait a minute, then try again';
+  }
+  if (m.includes('password')) return 'that password is too short — six characters at least';
+  if (m.includes('not allowed') || m.includes('disabled')) {
+    return 'new accounts are turned off for this app';
+  }
+  if (m.includes('invalid') && m.includes('email')) return 'that email does not look right';
+  return 'could not sign you in, and could not make an account either';
+}
+
 export async function signIn(email: string, password: string): Promise<Result<string>> {
   try {
     const res = await supabase.auth.signInWithPassword({ email, password });
-    if (res.error) {
-      // first time on this phone → create the account instead
-      const up = await supabase.auth.signUp({ email, password });
-      if (up.error) return err({ code: 'auth', message: 'that email or password did not work', cause: up.error });
-      if (!up.data.user) return err({ code: 'auth', message: 'check your email to confirm, then sign in' });
-      return ok(up.data.user.id);
+    if (!res.error) {
+      // a sign-in without a session is not a sign-in
+      if (!res.data.session || !res.data.user) {
+        return err({ code: 'auth', message: 'sign in did not complete' });
+      }
+      return ok(res.data.user.id);
     }
-    if (!res.data.user) return err({ code: 'auth', message: 'sign in did not complete' });
-    return ok(res.data.user.id);
+
+    // Supabase deliberately returns the same invalid_credentials for "wrong
+    // password" and "no such account", so first-run account creation still has
+    // to be attempted — but its outcome must never be reported as a sign-in.
+    const up = await supabase.auth.signUp({ email, password });
+    if (up.error) {
+      return err({ code: 'auth', message: signUpMessage(up.error), cause: up.error });
+    }
+    // No session here means one of two things, and NEITHER is success: the
+    // address needs confirming, or it already exists and Supabase obfuscated
+    // the response to prevent enumeration. Returning ok() in that case made the
+    // UI report a successful sign-in while the user was never signed in.
+    if (!up.data.session || !up.data.user) {
+      return err({
+        code: 'auth',
+        message: 'that address already has an account, or it needs confirming — check your email',
+        cause: up.error,
+      });
+    }
+    return ok(up.data.user.id);
   } catch (e) {
     return err(toAppError(e, 'could not reach the server — try again on wifi'));
   }
@@ -79,7 +114,7 @@ export async function loadProfiles(
         .eq('couple_id', coupleId)
         .neq('id', userId)
         .maybeSingle();
-      if (pRes.error) return err(toAppError(pRes.error, 'could not load her profile'));
+      if (pRes.error) return err(toAppError(pRes.error, 'could not load their profile'));
       partner = pRes.data;
     }
     return ok({ me: meRes.data, partner });

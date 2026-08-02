@@ -7,32 +7,36 @@ import type { MoodRow } from '../../../lib/db/database.types';
 
 export function MoodHistory({
   rows,
-  names,
+  partnerName,
   myId,
   limit = 3,
 }: {
   rows: MoodRow[];
-  names: { me: string; her: string };
+  partnerName: string;
   myId: string | null;
   limit?: number;
 }) {
   const days = groupByDay(rows).slice(0, limit);
   if (days.length === 0) return null;
   return (
-    <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.lg }}>
-      <Text variant="caption" color={colors.muted} style={{ marginBottom: spacing.sm }}>
+    <View style={{ paddingHorizontal: spacing.lg, gap: spacing.sm }}>
+      <Text
+        variant="overline"
+        color={colors.muted}
+        style={{ textTransform: 'uppercase', marginBottom: spacing.xs }}
+      >
         lately
       </Text>
       {days.map((d) => (
-        <Card key={d.day} style={{ marginBottom: spacing.sm, paddingVertical: spacing.md }}>
-          <Text variant="caption" color={colors.gold} style={{ marginBottom: spacing.xs }}>
+        <Card key={d.day} variant="quiet" style={{ gap: spacing.xs }}>
+          <Text variant="overline" color={colors.silver} style={{ textTransform: 'uppercase' }}>
             {new Date(`${d.day}T12:00:00`).toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}
           </Text>
           {d.rows.map((r) => {
             const meta = moodMeta(r.mood);
             return (
-              <Text key={r.id} variant="small" style={{ marginTop: spacing.xs }}>
-                {meta.emoji} {r.author_id === myId ? names.me : names.her} felt {meta.label}
+              <Text key={r.id} variant="small" color={colors.ink}>
+                {meta.emoji} {r.author_id === myId ? 'you' : partnerName} felt {meta.label}
               </Text>
             );
           })}

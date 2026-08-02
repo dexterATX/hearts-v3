@@ -2,7 +2,7 @@
 // api.ts returns Result<T, AppError>; nothing throws across a boundary.
 export type AppError = {
   code: 'network' | 'auth' | 'rls' | 'conflict' | 'validation' | 'unknown';
-  message: string; // my voice to her — never a stack trace
+  message: string; // the house voice, reader-facing — never a stack trace
   cause?: unknown;
 };
 

@@ -117,7 +117,8 @@ export const hangmanRules: GameRules<HangmanState, HangmanMove> = {
   outcome(state): Outcome | null {
     if (state.phase !== 'done') return null;
     if (isComplete(state)) {
-      return { winner: null, summary: 'you found every letter — the daisy says loves you, always' };
+      // Both phones render this, the setter's included — so not "you found".
+      return { winner: null, summary: 'every letter found — the daisy says loves you, always' };
     }
     return { winner: null, summary: 'the last petal fell — and even loves-me-not loves you' };
   },

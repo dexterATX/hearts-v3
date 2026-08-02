@@ -2,5 +2,8 @@
 export { Text } from './Text';
 export { Button } from './Button';
 export { Card } from './Card';
+export { Input } from './Input';
 export { Sheet } from './Sheet';
-export { Skeleton } from './Skeleton';
+export { Skeleton, SkeletonCard } from './Skeleton';
+export { Icon, type IconName } from './Icon';
+export { MetallicFrame, SILVER_METAL, BLUE_METAL, DANGER_METAL } from './MetallicFrame';

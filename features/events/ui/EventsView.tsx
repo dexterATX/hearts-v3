@@ -1,13 +1,15 @@
 // features/events/ui/EventsView.tsx — countdowns to everything that matters.
 import { useState } from 'react';
-import { View, TextInput, Pressable, ScrollView } from 'react-native';
-import { Text, Card, Button, Skeleton } from '../../../ui';
+import { View, Pressable, ScrollView } from 'react-native';
+import { Text, Card, Button, Input, Icon, SkeletonCard } from '../../../ui';
 import { colors, spacing, radius } from '../../../theme/theme';
+import { usePartnerName } from '../../../lib/session/store';
 import { useEvents, useEventActions, useUpcoming } from '../hooks';
 import { countdownLabel } from '../model';
 
 function AddEventCard() {
   const { add } = useEventActions();
+  const partnerName = usePartnerName();
   const [title, setTitle] = useState('');
   const [date, setDate] = useState('');
   const [recurring, setRecurring] = useState(true);
@@ -27,46 +29,44 @@ function AddEventCard() {
   };
 
   return (
-    <Card style={{ marginBottom: spacing.lg }}>
-      <TextInput
-        placeholder="her birthday, our trip, the day we met…"
-        placeholderTextColor={colors.muted}
+    <Card style={{ marginBottom: spacing.xl, gap: spacing.md }}>
+      <Input
+        placeholder={`${partnerName}’s birthday, our trip, the day we met…`}
         value={title}
         onChangeText={setTitle}
-        style={{
-          color: colors.ink,
-          fontSize: 15,
-          borderBottomWidth: 1,
-          borderColor: colors.line,
-          paddingVertical: spacing.sm,
-          marginBottom: spacing.sm,
-        }}
       />
-      <TextInput
+      <Input
         placeholder="YYYY-MM-DD"
-        placeholderTextColor={colors.muted}
         value={date}
         onChangeText={setDate}
         autoCapitalize="none"
-        style={{
-          color: colors.ink,
-          fontSize: 15,
-          borderBottomWidth: 1,
-          borderColor: colors.line,
-          paddingVertical: spacing.sm,
-          marginBottom: spacing.sm,
-        }}
+        error={error}
       />
-      <Pressable onPress={() => setRecurring(!recurring)} style={{ marginBottom: spacing.md }}>
-        <Text variant="small" color={recurring ? colors.rose : colors.muted}>
-          {recurring ? '🔁 every year' : '1️⃣ just once'}
-        </Text>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityState={{ selected: recurring }}
+        onPress={() => setRecurring(!recurring)}
+        style={{ alignSelf: 'flex-start' }}
+      >
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: spacing.xs,
+            borderWidth: 3,
+            borderColor: recurring ? colors.blue : colors.line,
+            backgroundColor: recurring ? colors.blueSoft : 'transparent',
+            borderRadius: radius.pill,
+            paddingVertical: spacing.sm,
+            paddingHorizontal: spacing.md,
+          }}
+        >
+          <Icon name="calendar" size={spacing.lg} color={recurring ? colors.blue : colors.muted} />
+          <Text variant="caption" color={recurring ? colors.blue : colors.muted}>
+            {recurring ? 'every year' : 'just once'}
+          </Text>
+        </View>
       </Pressable>
-      {error ? (
-        <Text variant="small" color={colors.rose} style={{ marginBottom: spacing.sm }}>
-          {error}
-        </Text>
-      ) : null}
       <Button label="add the day" haptic="medium" disabled={!title.trim() || !date} onPress={() => void submit()} />
     </Card>
   );
@@ -80,9 +80,10 @@ export function EventsView() {
 
   if (events.isLoading) {
     return (
-      <View style={{ padding: spacing.lg }}>
-        <Skeleton height={80} style={{ marginBottom: spacing.sm }} />
-        <Skeleton height={80} />
+      <View style={{ padding: spacing.lg, gap: spacing.sm }}>
+        <SkeletonCard lines={2} />
+        <SkeletonCard lines={1} />
+        <SkeletonCard lines={1} />
       </View>
     );
   }
@@ -90,8 +91,9 @@ export function EventsView() {
   if (events.error && !events.data) {
     return (
       <View style={{ padding: spacing.lg }}>
-        <Card>
-          <Text variant="small" color={colors.rose}>
+        <Card variant="danger" style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+          <Icon name="alert" size={spacing.xl} color={colors.danger} />
+          <Text variant="small" color={colors.danger} style={{ flex: 1 }}>
             the calendar would not load — pull down to try again
           </Text>
         </Card>
@@ -100,20 +102,21 @@ export function EventsView() {
   }
 
   return (
-    <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: spacing.lg }}>
+    <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: spacing.lg, paddingBottom: spacing.xxl }}>
       <AddEventCard />
       {upcomingList.length === 0 ? (
-        <Card>
-          <Text variant="small" color={colors.muted}>
+        <Card style={{ alignItems: 'center', gap: spacing.md, paddingVertical: spacing.xl }}>
+          <Icon name="calendar" size={spacing.xxl} color={colors.faint} />
+          <Text variant="small" color={colors.muted} style={{ textAlign: 'center' }}>
             no days on the calendar yet — add the one you never want to forget.
           </Text>
         </Card>
       ) : (
         upcomingList.map(({ event, days }) => (
-          <Card key={event.id} style={{ marginBottom: spacing.sm }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <View style={{ flex: 1 }}>
-                <Text variant="body">{event.title}</Text>
+          <Card key={event.id} variant="quiet" style={{ marginBottom: spacing.sm }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+              <View style={{ flex: 1, gap: spacing.xs }}>
+                <Text variant="heading">{event.title}</Text>
                 <Text variant="caption" color={colors.muted}>
                   {new Date(`${event.date}T12:00:00`).toLocaleDateString(undefined, {
                     month: 'long',
@@ -122,10 +125,16 @@ export function EventsView() {
                   {event.recurring ? ' · every year' : ''}
                 </Text>
               </View>
-              <Text variant="title" color={days <= 7 ? colors.rose : colors.gold}>
+              <Text
+                variant="title"
+                color={days <= 7 ? colors.blue : colors.silver}
+                style={{ textAlign: 'right' }}
+              >
                 {countdownLabel(days)}
               </Text>
               <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="remove this day"
                 onPress={() => {
                   if (armedId !== event.id) {
                     setArmedId(event.id);
@@ -137,9 +146,13 @@ export function EventsView() {
                 }}
                 style={{ padding: spacing.sm }}
               >
-                <Text variant="caption" color={armedId === event.id ? colors.rose : colors.muted}>
-                  {armedId === event.id ? 'sure?' : '✕'}
-                </Text>
+                {armedId === event.id ? (
+                  <Text variant="caption" color={colors.danger}>
+                    sure?
+                  </Text>
+                ) : (
+                  <Icon name="close" size={spacing.lg} color={colors.muted} />
+                )}
               </Pressable>
             </View>
           </Card>

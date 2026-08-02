@@ -731,6 +731,7 @@ export type Database = {
         Args: { p_display_name?: string; p_invite_code: string }
         Returns: string
       }
+      letter_body: { Args: { p_letter_id: string }; Returns: string }
       join_couple: { Args: { p_invite_code: string }; Returns: string }
     }
     Enums: {

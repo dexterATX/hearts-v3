@@ -6,10 +6,10 @@ import { useSession } from '../../lib/session/store';
 import { enqueue } from '../../lib/sync/outbox';
 import { emit, on } from '../../lib/sync/bus';
 import { supabase } from '../../lib/db/client';
-import { fetchLetters, fetchMoodHistory } from './api';
+import { fetchLetters, fetchLetterBody, fetchMoodHistory, type LetterListRow } from './api';
 import { isUnlocked } from './model';
 import { newUuid } from '../../lib/id';
-import type { LetterRow, LetterLockType } from '../../lib/db/database.types';
+import type { LetterLockType } from '../../lib/db/database.types';
 
 const KEY = ['letters'] as const;
 // same key as the mood feature uses → one shared cache entry, zero imports (§2.1)
@@ -74,13 +74,14 @@ export function useSendLetter() {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); // §5: medium on send
 
     // client-generated uuid, KEPT as the row's id: otherwise any update
-    // (opened_at) queued before the server assigns its id is a silent no-op
-    const optimistic: LetterRow = {
+    // (opened_at) queued before the server assigns its id is a silent no-op.
+    // The body deliberately never enters the query cache — it goes straight to
+    // the server and comes back only through letter_body() once unlocked (0008).
+    const optimistic: LetterListRow = {
       id: newUuid(),
       couple_id: coupleId,
       author_id: userId,
       label: input.label,
-      body: input.body,
       audio_url: input.audioStoragePath,
       lock_type: input.lockType,
       unlock_at: input.unlockAt,
@@ -89,10 +90,10 @@ export function useSendLetter() {
       op_id: null,
       created_at: new Date().toISOString(),
     };
-    queryClient.setQueryData<LetterRow[]>([...KEY, coupleId], (old) => [optimistic, ...(old ?? [])]);
+    queryClient.setQueryData<LetterListRow[]>([...KEY, coupleId], (old) => [optimistic, ...(old ?? [])]);
 
     const { op_id: _drop, ...row } = optimistic;
-    await enqueue({ coupleId, kind: 'upsert', table: 'letters', payload: row });
+    await enqueue({ coupleId, kind: 'upsert', table: 'letters', payload: { ...row, body: input.body } });
     emit({ t: 'letter:new', letterId: optimistic.id });
   };
 }
@@ -103,11 +104,11 @@ export function useOpenLetter() {
   const coupleId = useSession((s) => s.coupleId);
   const queryClient = useQueryClient();
 
-  return async (letter: LetterRow) => {
+  return async (letter: LetterListRow) => {
     if (!coupleId) return false;
     await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); // §5: success on unlock
     const openedAt = new Date().toISOString();
-    queryClient.setQueryData<LetterRow[]>([...KEY, coupleId], (old) =>
+    queryClient.setQueryData<LetterListRow[]>([...KEY, coupleId], (old) =>
       (old ?? []).map((l) => (l.id === letter.id ? { ...l, opened_at: openedAt } : l)),
     );
     // outbox, not direct: an airplane-mode seal-break must not be lost.
@@ -124,8 +125,24 @@ export function useOpenLetter() {
   };
 }
 
+/** The letter's text, fetched only when she opens it. The server decides
+ *  whether to hand it over (0008) — before this, the plaintext of every sealed
+ *  letter was already sitting on the recipient's phone. */
+export function useLetterBody(letterId: string | null, enabled: boolean) {
+  return useQuery({
+    queryKey: ['letter-body', letterId],
+    queryFn: async () => {
+      const res = await fetchLetterBody(letterId as string);
+      if (!res.ok) throw new Error(res.error.message);
+      return res.data;
+    },
+    enabled: !!letterId && enabled,
+    staleTime: Infinity, // once open, it does not change
+  });
+}
+
 /** Resolve the live unlock state of one letter against moods + clock. */
-export function useLetterUnlocked(letter: LetterRow): boolean {
+export function useLetterUnlocked(letter: Pick<LetterListRow, 'lock_type' | 'unlock_at' | 'unlock_mood' | 'opened_at'>): boolean {
   const coupleId = useSession((s) => s.coupleId);
   const moods = useQuery({
     queryKey: [...MOOD_KEY, coupleId],

@@ -3,7 +3,7 @@
 import { View, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { Text, Button, Card, Skeleton } from '../../ui';
+import { Text, Button, Card, Icon, SkeletonCard } from '../../ui';
 import { colors, spacing } from '../../theme/theme';
 import {
   LetterCard,
@@ -15,14 +15,27 @@ import {
 } from '../../features/letters';
 import { usePublishPresence } from '../../features/presence';
 import { useSession } from '../../lib/session/store';
-import type { LetterRow } from '../../lib/db/database.types';
+import type { LetterListRow } from '../../features/letters';
 
-function LetterEntry({ letter, mine }: { letter: LetterRow; mine: boolean }) {
+function SectionLabel({ children }: { children: string }) {
+  return (
+    <Text
+      variant="overline"
+      color={colors.muted}
+      style={{ textTransform: 'uppercase', marginBottom: spacing.md }}
+    >
+      {children}
+    </Text>
+  );
+}
+
+function LetterEntry({ letter, mine }: { letter: LetterListRow; mine: boolean }) {
   const unlocked = useLetterUnlocked(letter);
   return (
     <LetterCard
       letter={letter}
       unlocked={unlocked || mine} // authors can always re-read their own
+      mine={mine}
       onPress={() => {
         if (unlocked || mine) router.push(`/letters/${letter.id}`);
       }}
@@ -38,47 +51,66 @@ export default function LettersTab() {
 
   return (
     <SafeAreaView style={{ flex: 1 }} edges={['top']}>
-      <ScrollView contentContainerStyle={{ padding: spacing.lg }}>
-        <View style={{ marginBottom: spacing.lg }}>
-          <Button label="seal a new letter" haptic="medium" onPress={() => router.push('/letters/new')} />
-        </View>
+      <ScrollView
+        contentContainerStyle={{
+          padding: spacing.lg,
+          paddingBottom: spacing.huge,
+          gap: spacing.xl,
+        }}
+      >
+        <Button
+          label="seal a new letter"
+          tone="primary"
+          size="lg"
+          icon="letter"
+          haptic="medium"
+          onPress={() => router.push('/letters/new')}
+        />
 
         {letters.isLoading ? (
-          <>
-            <Skeleton height={88} style={{ marginBottom: spacing.md }} />
-            <Skeleton height={88} />
-          </>
+          <View style={{ gap: spacing.md }}>
+            <SkeletonCard lines={2} />
+            <SkeletonCard lines={2} />
+          </View>
         ) : letters.error ? (
-          <Card>
-            <Text variant="small" color={colors.rose}>
-              the letters would not open — pull down to try again
-            </Text>
+          <Card variant="danger">
+            <View style={{ flexDirection: 'row', gap: spacing.md }}>
+              <Icon name="alert" size={18} color={colors.danger} />
+              <Text variant="small" color={colors.danger} style={{ flex: 1 }}>
+                the letters would not open — pull down to try again
+              </Text>
+            </View>
           </Card>
         ) : (letters.data ?? []).length === 0 ? (
-          <Card>
-            <Text variant="small" color={colors.muted}>
-              no letters yet. write the first one and seal it — someday she opens
-              it on exactly the right day.
+          <Card variant="quiet" style={{ alignItems: 'center', paddingVertical: spacing.xxl }}>
+            <Icon name="letter" size={28} color={colors.faint} />
+            <Text
+              variant="small"
+              color={colors.muted}
+              style={{ marginTop: spacing.lg, textAlign: 'center' }}
+            >
+              no letters yet. write the first one and seal it — someday it opens
+              on exactly the right day.
             </Text>
           </Card>
         ) : (
           <>
             {sealed(letters.data ?? []).length > 0 ? (
-              <Text variant="caption" color={colors.gold} style={{ marginBottom: spacing.sm }}>
-                waiting for the right moment
-              </Text>
+              <View>
+                <SectionLabel>waiting for the right moment</SectionLabel>
+                {sealed(letters.data ?? []).map((l) => (
+                  <LetterEntry key={l.id} letter={l} mine={l.author_id === myId} />
+                ))}
+              </View>
             ) : null}
-            {sealed(letters.data ?? []).map((l) => (
-              <LetterEntry key={l.id} letter={l} mine={l.author_id === myId} />
-            ))}
             {shelf(letters.data ?? []).length > 0 ? (
-              <Text variant="caption" color={colors.muted} style={{ marginTop: spacing.lg, marginBottom: spacing.sm }}>
-                the shelf — opened, kept, rereadable
-              </Text>
+              <View>
+                <SectionLabel>the shelf — opened, kept, rereadable</SectionLabel>
+                {shelf(letters.data ?? []).map((l) => (
+                  <LetterEntry key={l.id} letter={l} mine={l.author_id === myId} />
+                ))}
+              </View>
             ) : null}
-            {shelf(letters.data ?? []).map((l) => (
-              <LetterEntry key={l.id} letter={l} mine={l.author_id === myId} />
-            ))}
           </>
         )}
       </ScrollView>

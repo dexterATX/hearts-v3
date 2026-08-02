@@ -4,7 +4,7 @@
 import { useEffect, useState } from 'react';
 import { View, Pressable } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
-import { Text, Card } from '../../../ui';
+import { Text, Card, Icon } from '../../../ui';
 import { colors, spacing } from '../../../theme/theme';
 import {
   subscribeOutbox,
@@ -49,10 +49,11 @@ export function OutboxBanner() {
   if (status.dead.length === 0 && status.pending === 0) return null;
 
   return (
-    <View style={{ paddingHorizontal: spacing.lg, marginBottom: spacing.md }}>
+    <View style={{ paddingHorizontal: spacing.lg, gap: spacing.sm }}>
       {status.pending > 0 ? (
-        <Card style={{ marginBottom: spacing.sm, borderColor: colors.line }}>
-          <Text variant="caption" color={colors.muted}>
+        // waiting is not failing: quiet surface, no alarm colour
+        <Card variant="quiet">
+          <Text variant="small" color={colors.muted}>
             {status.flushing
               ? 'sending what you queued…'
               : status.pending === 1
@@ -65,6 +66,7 @@ export function OutboxBanner() {
       {status.dead.map((d) => (
         <Pressable
           key={d.op.opId}
+          accessibilityRole="button"
           onPress={() => {
             // visible rollback: the ghost row leaves the screen, the op is
             // acknowledged, and the refetch restores the honest state
@@ -73,17 +75,11 @@ export function OutboxBanner() {
             acknowledgeDead(d.op.opId);
           }}
         >
-          <Card
-            style={{
-              marginBottom: spacing.sm,
-              borderColor: colors.rose,
-              backgroundColor: colors.surfaceAlt,
-            }}
-          >
-            <Text variant="small" color={colors.rose}>
-              {KIND_WORD[d.op.table] ?? 'something'} never reached her phone — the server
-              refused it, which usually means it is already there. tap to let it go and see
-              the honest state.
+          <Card variant="danger" style={{ flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md }}>
+            <Icon name="alert" size={18} color={colors.danger} />
+            <Text variant="small" color={colors.danger} style={{ flex: 1 }}>
+              {KIND_WORD[d.op.table] ?? 'something'} did not save — the server refused it, which
+              usually means it is already there. tap to let it go and see the honest state.
             </Text>
           </Card>
         </Pressable>

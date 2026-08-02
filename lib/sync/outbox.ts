@@ -2,6 +2,7 @@
 // directly; every mutation enqueues here. Optimistic application happens in
 // the feature's hooks.ts (TanStack setQueryData) BEFORE enqueue resolves.
 import { supabase } from '../db/client';
+import { useSession } from '../session/store';
 import { newUuid as newOpId } from '../id';
 import {
   insertOp,
@@ -34,6 +35,7 @@ const listeners = new Set<StatusListener>();
 let flushing = false;
 let dead: DeadOp[] = [];
 let flushTimer: ReturnType<typeof setTimeout> | null = null;
+let paused = false;
 // Backoff state lives ACROSS flushes (swarm finding): re-zeroing per flush
 // made decide()'s wait branch unreachable, and a fresh enqueue's
 // scheduleFlush(0) could preempt an in-progress backoff entirely.
@@ -93,7 +95,26 @@ export async function enqueue(input: {
   return op;
 }
 
+/** Sign-out must stop the queue, not drain it. An armed flushTimer used to
+ *  survive sign-out, fire with only the anon key, take a 42501 from RLS, and
+ *  hit the "permanent 4xx" branch — which REMOVES the op. Queued letters and
+ *  journal entries were destroyed, never sent, with the only trace in an
+ *  in-memory array on a tab you cannot reach while signed out. */
+export function pauseOutbox(): void {
+  paused = true;
+  if (flushTimer) {
+    clearTimeout(flushTimer);
+    flushTimer = null;
+  }
+}
+
+export function resumeOutbox(): void {
+  paused = false;
+  scheduleFlush(0);
+}
+
 export function scheduleFlush(delayMs: number): void {
+  if (paused) return;
   if (flushTimer) clearTimeout(flushTimer);
   // never fire before the current backoff horizon — a new write must not
   // hammer the op that's already backing off
@@ -132,15 +153,28 @@ async function send(op: Op): Promise<SendResult> {
 
 /** Step 4 of §2.3: drain oldest-first, one at a time, with backoff. */
 export async function flush(): Promise<void> {
-  if (flushing) return;
+  if (flushing || paused) return;
+
+  // Never send without a session: an unauthenticated write takes a 42501 from
+  // RLS, which classifies as a permanent 4xx and DELETES the op. Ops stay
+  // queued instead and drain on the next authenticated flush.
+  const { data: auth } = await supabase.auth.getSession();
+  if (!auth.session) return;
+
   flushing = true;
   void emitStatus();
   try {
+    // Only drain ops belonging to the couple we are currently signed in as.
+    // Ops left over from a previous account would fail this couple's RLS and
+    // be destroyed by the same permanent-4xx path.
+    const activeCouple = useSession.getState().coupleId;
     const rows = orderForFlush(
-      (await pendingOps()).map((r) => ({
-        ...r,
-        createdAt: r.created_at,
-      })),
+      (await pendingOps())
+        .filter((r) => !activeCouple || r.couple_id === activeCouple)
+        .map((r) => ({
+          ...r,
+          createdAt: r.created_at,
+        })),
     );
     for (const row of rows) {
       const op: Op = {

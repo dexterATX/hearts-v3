@@ -16,7 +16,7 @@ export async function fetchCouple(coupleId: string): Promise<Result<CoupleRow>> 
 
 export type FeedRows = {
   moods: MoodRow[];
-  letters: LetterRow[];
+  letters: Omit<LetterRow, 'body'>[]; // the feed shows labels, never text
   voice: VoiceNoteRow[];
   photos: PhotoRow[];
 };
@@ -25,7 +25,14 @@ export async function fetchFeedRows(coupleId: string): Promise<Result<FeedRows>>
   try {
     const [moods, letters, voice, photos] = await Promise.all([
       supabase.from('moods').select('*').eq('couple_id', coupleId).order('created_at', { ascending: false }).limit(20),
-      supabase.from('letters').select('*').eq('couple_id', coupleId).order('created_at', { ascending: false }).limit(20),
+      // no `body`: 0008 keeps a sealed letter's text on the server, and
+      // select('*') would now fail with "permission denied for column body"
+      supabase
+        .from('letters')
+        .select('id,couple_id,author_id,label,audio_url,lock_type,unlock_at,unlock_mood,opened_at,op_id,created_at')
+        .eq('couple_id', coupleId)
+        .order('created_at', { ascending: false })
+        .limit(20),
       supabase.from('voice_notes').select('*').eq('couple_id', coupleId).order('created_at', { ascending: false }).limit(20),
       supabase.from('photos').select('*').eq('couple_id', coupleId).order('created_at', { ascending: false }).limit(20),
     ]);

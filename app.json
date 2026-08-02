@@ -6,13 +6,23 @@
     "orientation": "portrait",
     "scheme": "hearts",
     "userInterfaceStyle": "dark",
-    "backgroundColor": "#0F0A12",
+    "backgroundColor": "#05070C",
+    "updates": {
+      "url": "https://u.expo.dev/00ddf3c9-9509-4ed3-b30d-5fb0d2bc0783",
+      "fallbackToCacheTimeout": 0,
+      "requestHeaders": {
+        "expo-channel-name": "production"
+      }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "love.scotty.hearts",
       "infoPlist": {
-        "NSFaceIDUsageDescription": "unlock hearts — it is just for you two",
-        "NSMicrophoneUsageDescription": "record voice notes for her",
+        "NSFaceIDUsageDescription": "unlock hearts \u2014 it is just for you two",
+        "NSMicrophoneUsageDescription": "record voice notes for your person",
         "NSPhotoLibraryUsageDescription": "add photos to your shared albums"
       }
     },
@@ -20,14 +30,20 @@
       "package": "love.scotty.hearts",
       "predictiveBackGestureEnabled": true,
       "permissions": [
-        "POST_NOTIFICATIONS",
-        "RECORD_AUDIO",
-        "VIBRATE"
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.VIBRATE",
+        "android.permission.USE_BIOMETRIC",
+        "android.permission.USE_FINGERPRINT",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"
       ],
       "adaptiveIcon": {
-        "backgroundColor": "#0F0A12"
+        "backgroundColor": "#05070C"
       },
-      "allowBackup": false
+      "allowBackup": false,
+      "googleServicesFile": "./google-services.json"
     },
     "plugins": [
       "expo-router",
@@ -37,7 +53,7 @@
       [
         "expo-notifications",
         {
-          "color": "#FF6B8A",
+          "color": "#4D8DF7",
           "defaultChannel": "hearts"
         }
       ],
@@ -50,21 +66,31 @@
       [
         "expo-audio",
         {
-          "microphonePermission": "record voice notes for her"
+          "microphonePermission": "record voice notes for your person"
         }
       ],
       "expo-font",
       "expo-web-browser",
-      "expo-asset"
+      "expo-asset",
+      [
+        "expo-navigation-bar",
+        {
+          "style": "light",
+          "enforceContrast": false
+        }
+      ],
+      "./plugins/withReleaseSigning"
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
     },
     "extra": {
+      "router": {},
       "eas": {
-        "projectId": "00000000-0000-0000-0000-000000000000"
+        "projectId": "00ddf3c9-9509-4ed3-b30d-5fb0d2bc0783"
       }
-    }
+    },
+    "owner": "scotty12s-team"
   }
 }

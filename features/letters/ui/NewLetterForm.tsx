@@ -1,20 +1,26 @@
 // features/letters/ui/NewLetterForm.tsx — write, seal, choose the lock.
 import { useState } from 'react';
-import { View, TextInput, ScrollView, Pressable } from 'react-native';
-import { Text, Button } from '../../../ui';
+import { View, ScrollView, Pressable } from 'react-native';
+import { Text, Button, Card, Input, Icon } from '../../../ui';
 import { colors, spacing, radius } from '../../../theme/theme';
 import { MOODS } from '../../../lib/moods';
 import { useSendLetter } from '../hooks';
+import { usePartnerName } from '../../../lib/session/store';
 import type { LetterLockType } from '../../../lib/db/database.types';
 
-const LOCKS: { key: LetterLockType; hint: string }[] = [
-  { key: 'anytime', hint: 'she can open it the moment it lands' },
-  { key: 'date', hint: 'sealed until a day you pick' },
-  { key: 'mood', hint: 'opens when one of you feels a certain way' },
+// Stays a module constant: only the `anytime` hint needs the name, so it takes
+// it at render rather than rebuilding the whole array on every keystroke.
+const LOCKS: { key: LetterLockType; label: string; hint: (partnerName: string) => string }[] = [
+  { key: 'anytime', label: 'anytime', hint: (n) => `${n} can open it the moment it lands` },
+  { key: 'date', label: 'on a date', hint: () => 'sealed until a day you pick' },
+  { key: 'mood', label: 'on a feeling', hint: () => 'opens when one of you feels a certain way' },
 ];
+
+const BODY_MIN_HEIGHT = spacing.huge * 4; // room for a real letter, not a caption
 
 export function NewLetterForm({ onSent }: { onSent: () => void }) {
   const send = useSendLetter();
+  const partnerName = usePartnerName();
   const [label, setLabel] = useState('');
   const [body, setBody] = useState('');
   const [lockType, setLockType] = useState<LetterLockType>('anytime');
@@ -59,119 +65,161 @@ export function NewLetterForm({ onSent }: { onSent: () => void }) {
     }
   };
 
+  const activeLock = LOCKS.find((l) => l.key === lockType);
+
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: colors.bg }} contentContainerStyle={{ padding: spacing.xl }}>
-      <Text variant="title" style={{ marginBottom: spacing.xl }}>
-        seal a letter for her
-      </Text>
+    <ScrollView
+      style={{ flex: 1, backgroundColor: colors.bg }}
+      contentContainerStyle={{ padding: spacing.xl, paddingBottom: spacing.huge, gap: spacing.xl }}
+    >
+      <Text variant="display">seal a letter for {partnerName}</Text>
 
-      <TextInput
-        placeholder='label — "open when you miss me"'
-        placeholderTextColor={colors.muted}
-        value={label}
-        onChangeText={setLabel}
-        style={{
-          color: colors.ink,
-          fontSize: 17,
-          borderBottomWidth: 1,
-          borderColor: colors.line,
-          paddingVertical: spacing.md,
-          marginBottom: spacing.lg,
-        }}
-      />
-      <TextInput
-        placeholder="say it like you would out loud…"
-        placeholderTextColor={colors.muted}
-        value={body}
-        onChangeText={setBody}
-        multiline
-        style={{
-          color: colors.ink,
-          fontSize: 17,
-          minHeight: 180,
-          textAlignVertical: 'top',
-          borderWidth: 1,
-          borderColor: colors.line,
-          borderRadius: radius.md,
-          padding: spacing.lg,
-          marginBottom: spacing.xl,
-        }}
-      />
-
-      <Text variant="small" color={colors.muted} style={{ marginBottom: spacing.sm }}>
-        when can she open it?
-      </Text>
-      {LOCKS.map((l) => (
-        <Pressable key={l.key} onPress={() => setLockType(l.key)} style={{ marginBottom: spacing.sm }}>
-          <View
-            style={{
-              borderWidth: 1,
-              borderColor: lockType === l.key ? colors.rose : colors.line,
-              borderRadius: radius.md,
-              padding: spacing.md,
-              backgroundColor: lockType === l.key ? colors.surfaceAlt : colors.surface,
-            }}
-          >
-            <Text variant="body" color={lockType === l.key ? colors.rose : colors.ink}>
-              {l.key === 'anytime' ? '💌 anytime' : l.key === 'date' ? '📅 on a date' : '💭 on a feeling'}
-            </Text>
-            <Text variant="caption" color={colors.muted}>
-              {l.hint}
-            </Text>
-          </View>
-        </Pressable>
-      ))}
-
-      {lockType === 'date' ? (
-        <TextInput
-          placeholder="YYYY-MM-DD"
-          placeholderTextColor={colors.muted}
-          value={unlockAt}
-          onChangeText={setUnlockAt}
-          autoCapitalize="none"
-          style={{
-            color: colors.ink,
-            fontSize: 17,
-            borderWidth: 1,
-            borderColor: colors.line,
-            borderRadius: radius.md,
-            padding: spacing.md,
-            marginTop: spacing.sm,
-          }}
+      <View style={{ gap: spacing.lg }}>
+        <Input
+          placeholder='label — "open when you miss me"'
+          value={label}
+          onChangeText={setLabel}
         />
-      ) : null}
+        <Input
+          placeholder="say it like you would out loud…"
+          value={body}
+          onChangeText={setBody}
+          multiline
+          style={{ minHeight: BODY_MIN_HEIGHT, textAlignVertical: 'top' }}
+        />
+      </View>
 
-      {lockType === 'mood' ? (
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginTop: spacing.sm }}>
-          {MOODS.map((m) => (
-            <Pressable key={m.key} onPress={() => setUnlockMood(m.key)} style={{ margin: spacing.xs }}>
-              <View
+      <View>
+        <Text
+          variant="overline"
+          color={colors.muted}
+          style={{ textTransform: 'uppercase', marginBottom: spacing.md }}
+        >
+          when can {partnerName} open it?
+        </Text>
+
+        {/* segmented control — one blue segment, the rest glass */}
+        <View
+          style={{
+            flexDirection: 'row',
+            gap: spacing.xs,
+            padding: spacing.xs,
+            borderRadius: radius.md,
+            borderWidth: 3,
+            borderColor: colors.line,
+            backgroundColor: colors.surfaceAlt,
+          }}
+        >
+          {LOCKS.map((l) => {
+            const on = lockType === l.key;
+            return (
+              <Pressable
+                key={l.key}
+                accessibilityRole="button"
+                accessibilityState={{ selected: on }}
+                onPress={() => setLockType(l.key)}
                 style={{
-                  borderWidth: 1,
-                  borderColor: unlockMood === m.key ? colors.rose : colors.line,
-                  borderRadius: radius.lg,
-                  paddingVertical: spacing.xs,
-                  paddingHorizontal: spacing.md,
+                  flex: 1,
+                  alignItems: 'center',
+                  paddingVertical: spacing.sm,
+                  paddingHorizontal: spacing.xs,
+                  borderRadius: radius.sm,
+                  borderWidth: 3,
+                  borderColor: on ? colors.blue : 'transparent',
+                  backgroundColor: on ? colors.blueSoft : 'transparent',
                 }}
               >
-                <Text variant="small" color={unlockMood === m.key ? colors.rose : colors.ink}>
-                  {m.emoji} {m.label}
+                <Text
+                  variant="small"
+                  weight={on ? 'semibold' : 'regular'}
+                  color={on ? colors.ink : colors.muted}
+                >
+                  {l.label}
                 </Text>
-              </View>
-            </Pressable>
-          ))}
+              </Pressable>
+            );
+          })}
         </View>
-      ) : null}
+
+        {activeLock ? (
+          <Text variant="caption" color={colors.muted} style={{ marginTop: spacing.md }}>
+            {activeLock.hint(partnerName)}
+          </Text>
+        ) : null}
+
+        {lockType === 'date' ? (
+          <View style={{ marginTop: spacing.lg }}>
+            <Input
+              placeholder="YYYY-MM-DD"
+              value={unlockAt}
+              onChangeText={setUnlockAt}
+              autoCapitalize="none"
+            />
+          </View>
+        ) : null}
+
+        {lockType === 'mood' ? (
+          <View
+            style={{
+              flexDirection: 'row',
+              flexWrap: 'wrap',
+              gap: spacing.sm,
+              marginTop: spacing.lg,
+            }}
+          >
+            {MOODS.map((m) => {
+              const on = unlockMood === m.key;
+              return (
+                <Pressable
+                  key={m.key}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: on }}
+                  onPress={() => setUnlockMood(m.key)}
+                  style={{
+                    borderWidth: 3,
+                    borderColor: on ? colors.blue : colors.line,
+                    backgroundColor: on ? colors.blueSoft : colors.surface,
+                    borderRadius: radius.pill,
+                    paddingVertical: spacing.sm,
+                    paddingHorizontal: spacing.md,
+                  }}
+                >
+                  <Text variant="small" color={on ? colors.blue : colors.ink}>
+                    {m.emoji} {m.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        ) : null}
+      </View>
 
       {error ? (
-        <Text variant="small" color={colors.rose} style={{ marginTop: spacing.md }}>
-          {error}
-        </Text>
+        <Card variant="danger">
+          <View style={{ flexDirection: 'row', gap: spacing.md }}>
+            <Icon name="alert" size={18} color={colors.danger} />
+            <Text
+              variant="small"
+              color={colors.danger}
+              accessibilityLiveRegion="polite"
+              style={{ flex: 1 }}
+            >
+              {error}
+            </Text>
+          </View>
+        </Card>
       ) : null}
 
-      <View style={{ marginTop: spacing.xl }}>
-        <Button label={busy ? 'sealing…' : 'seal it with a kiss'} haptic="medium" disabled={busy} onPress={() => void submit()} />
-      </View>
+      <Button
+        label="seal it with a kiss"
+        tone="primary"
+        size="lg"
+        icon="lock"
+        haptic="medium"
+        loading={busy}
+        disabled={busy}
+        onPress={() => void submit()}
+      />
     </ScrollView>
   );
 }

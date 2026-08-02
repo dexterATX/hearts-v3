@@ -7,6 +7,9 @@ export default defineConfig({
   test: {
     environment: 'node',
     include: ['**/*.test.ts'],
-    exclude: ['node_modules/**', 'supabase/functions/**'],
+    // .claude/worktrees holds full clones of this repo; without excluding them
+    // vitest globbed 3 copies of every test (27 files, ~201 "tests") and any
+    // stale worktree could fail the run for reasons unrelated to the tree.
+    exclude: ['node_modules/**', 'supabase/functions/**', '.claude/**'],
   },
 });

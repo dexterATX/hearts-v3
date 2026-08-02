@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { View, Pressable, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Text } from '../../ui';
+import { Text, Button, Icon } from '../../ui';
 import { colors, spacing, radius } from '../../theme/theme';
 import { usePublishPresence } from '../../features/presence';
 import { PhotoGrid, AlbumsRail, usePhotoSync, useAddPhoto, useAddAlbum } from '../../features/photos';
@@ -14,12 +14,12 @@ import { EventsView, useEventSync, useEventReminders } from '../../features/even
 import { CompanionScreen } from '../../features/ai';
 
 const SECTIONS = [
-  { key: 'photos', label: '📷 photos' },
-  { key: 'voice', label: '🎙️ voice' },
-  { key: 'journal', label: '📔 journal' },
-  { key: 'bucket', label: '🌟 bucket list' },
-  { key: 'events', label: '📅 days' },
-  { key: 'companion', label: '✨ companion' },
+  { key: 'photos', label: 'photos', icon: 'image' },
+  { key: 'voice', label: 'voice', icon: 'mic' },
+  { key: 'journal', label: 'journal', icon: 'book' },
+  { key: 'bucket', label: 'bucket list', icon: 'check' },
+  { key: 'events', label: 'days', icon: 'calendar' },
+  { key: 'companion', label: 'companion', icon: 'sparkle' },
 ] as const;
 
 type SectionKey = (typeof SECTIONS)[number]['key'];
@@ -37,55 +37,93 @@ export default function UsTab() {
   const { pickAndUpload, uploads } = useAddPhoto();
   const addAlbum = useAddAlbum();
 
+  const uploading = uploads.find((u) => u.status === 'uploading');
+  const percent = Math.round((uploading?.progress ?? 0) * 100);
+
   return (
     <SafeAreaView style={{ flex: 1 }} edges={['top']}>
-      <View style={{ paddingVertical: spacing.sm }}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: spacing.lg }}>
-          {SECTIONS.map((s) => (
-            <Pressable key={s.key} onPress={() => setSection(s.key)} style={{ marginRight: spacing.sm }}>
-              <View
-                style={{
-                  borderWidth: 1,
-                  borderColor: section === s.key ? colors.rose : colors.line,
-                  borderRadius: radius.lg,
-                  paddingVertical: spacing.xs,
-                  paddingHorizontal: spacing.md,
-                  backgroundColor: section === s.key ? colors.surfaceAlt : colors.surface,
-                }}
+      <View style={{ paddingTop: spacing.md, paddingBottom: spacing.lg }}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: spacing.lg, gap: spacing.sm }}
+        >
+          {SECTIONS.map((s) => {
+            const active = section === s.key;
+            return (
+              <Pressable
+                key={s.key}
+                accessibilityRole="button"
+                accessibilityState={{ selected: active }}
+                onPress={() => setSection(s.key)}
               >
-                <Text variant="small" color={section === s.key ? colors.rose : colors.muted}>
-                  {s.label}
-                </Text>
-              </View>
-            </Pressable>
-          ))}
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: spacing.xs,
+                    borderWidth: 3,
+                    borderColor: active ? colors.blue : colors.line,
+                    borderRadius: radius.pill,
+                    paddingVertical: spacing.sm,
+                    paddingHorizontal: spacing.md,
+                    backgroundColor: active ? colors.blueSoft : colors.surface,
+                  }}
+                >
+                  <Icon name={s.icon} size={spacing.lg} color={active ? colors.blue : colors.muted} />
+                  <Text
+                    variant="caption"
+                    weight={active ? 'semibold' : 'medium'}
+                    color={active ? colors.blue : colors.muted}
+                  >
+                    {s.label}
+                  </Text>
+                </View>
+              </Pressable>
+            );
+          })}
         </ScrollView>
       </View>
 
       {section === 'photos' ? (
         <View style={{ flex: 1 }}>
           <AlbumsRail activeAlbumId={albumFilter} onPick={setAlbumFilter} />
-          <View style={{ flexDirection: 'row', justifyContent: 'center', paddingBottom: spacing.sm }}>
-            <Pressable onPress={() => void pickAndUpload(albumFilter, '')}>
-              <Text variant="small" color={colors.rose} style={{ marginRight: spacing.xl }}>
-                ＋ add a photo
-              </Text>
-            </Pressable>
-            <Pressable
+          <View
+            style={{
+              flexDirection: 'row',
+              justifyContent: 'center',
+              gap: spacing.sm,
+              paddingHorizontal: spacing.lg,
+              paddingBottom: spacing.md,
+            }}
+          >
+            <Button label="add a photo" icon="image" onPress={() => void pickAndUpload(albumFilter, '')} />
+            <Button
+              label="new album"
+              tone="ghost"
+              icon="book"
               onPress={() => {
                 const title = `album ${(new Date().getMonth() + 1).toString().padStart(2, '0')}/${new Date().getFullYear()}`;
                 void addAlbum(title);
               }}
-            >
-              <Text variant="small" color={colors.gold}>
-                ＋ new album
-              </Text>
-            </Pressable>
+            />
           </View>
-          {uploads.some((u) => u.status === 'uploading') ? (
-            <Text variant="caption" color={colors.muted} style={{ textAlign: 'center', paddingBottom: spacing.sm }}>
-              uploading… {Math.round((uploads.find((u) => u.status === 'uploading')?.progress ?? 0) * 100)}%
-            </Text>
+          {uploading ? (
+            <View style={{ paddingHorizontal: spacing.lg, paddingBottom: spacing.md, gap: spacing.sm }}>
+              <Text variant="caption" color={colors.muted} style={{ textAlign: 'center' }}>
+                uploading… {percent}%
+              </Text>
+              <View
+                style={{
+                  height: spacing.xs / 2,
+                  borderRadius: radius.pill,
+                  backgroundColor: colors.surfaceAlt,
+                  overflow: 'hidden',
+                }}
+              >
+                <View style={{ width: `${percent}%`, height: '100%', backgroundColor: colors.blue }} />
+              </View>
+            </View>
           ) : null}
           <PhotoGrid albumId={albumFilter} />
         </View>

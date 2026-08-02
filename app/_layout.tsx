@@ -8,7 +8,16 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import * as Crypto from 'expo-crypto';
-import { colors } from '../theme/theme';
+import * as SystemUI from 'expo-system-ui';
+import {
+  useFonts,
+  Inter_400Regular,
+  Inter_500Medium,
+  Inter_600SemiBold,
+  Inter_700Bold,
+} from '@expo-google-fonts/inter';
+import { Sora_600SemiBold, Sora_700Bold } from '@expo-google-fonts/sora';
+import { colors, fonts } from '../theme/theme';
 import { useSession } from '../lib/session/store';
 import { setUuidRng } from '../lib/id';
 import { startReconcile } from '../lib/sync/reconcile';
@@ -19,6 +28,10 @@ import { router } from 'expo-router';
 
 // Hermes has no global crypto — inject expo-crypto's CSPRNG for all uuids
 setUuidRng((bytes) => Crypto.getRandomValues(bytes));
+
+// paint the native window before React mounts, so a cold start never flashes
+// white behind the JS bundle
+void SystemUI.setBackgroundColorAsync(colors.bg);
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -70,6 +83,9 @@ function Bootstrap() {
         screenOptions={{
           headerStyle: { backgroundColor: colors.bg },
           headerTintColor: colors.ink,
+          headerTitleStyle: { fontFamily: fonts.displaySemi, fontSize: 17 },
+          // the default hairline reads as a seam against a near-black page
+          headerShadowVisible: false,
           contentStyle: { backgroundColor: colors.bg },
           animation: 'fade',
         }}
@@ -102,11 +118,23 @@ function RedirectGate({ to }: { to: string }) {
 }
 
 export default function RootLayout() {
+  // Gate on fonts OUTSIDE Bootstrap: an early return inside it would sit above
+  // its other hooks and change hook order between renders. Holding the mount
+  // also avoids a visible reflow from system font → Inter on first paint.
+  const [fontsLoaded] = useFonts({
+    Inter_400Regular,
+    Inter_500Medium,
+    Inter_600SemiBold,
+    Inter_700Bold,
+    Sora_600SemiBold,
+    Sora_700Bold,
+  });
+
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
+    <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.bg }}>
       <SafeAreaProvider>
         <QueryClientProvider client={queryClient}>
-          <Bootstrap />
+          {fontsLoaded ? <Bootstrap /> : <View style={{ flex: 1, backgroundColor: colors.bg }} />}
         </QueryClientProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
