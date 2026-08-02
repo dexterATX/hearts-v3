@@ -11,7 +11,7 @@ import Animated, {
   Extrapolation,
 } from 'react-native-reanimated';
 import { colors, radius, spacing } from '../../theme/theme';
-import { MoodBunny, Text } from '../../ui';
+import { MoodBunny, Reveal, Text } from '../../ui';
 import { useSession, usePartnerName } from '../../lib/session/store';
 import {
   DaysTogether,
@@ -102,7 +102,7 @@ export default function HomeTab() {
 
   const headerElement = useMemo(
     () => (
-      <View style={{ gap: spacing.xl, paddingTop: spacing.md, paddingBottom: spacing.xl }}>
+      <View style={{ gap: spacing.lg, paddingTop: spacing.md, paddingBottom: spacing.xl }}>
         <OutboxBanner />
         <PresenceChip />
         <Animated.View style={heroStyle}>
@@ -116,16 +116,9 @@ export default function HomeTab() {
             loading={moods.isPending}
           />
         </View>
-        <View>
-          <Text
-            variant="overline"
-            color={colors.faint}
-            style={{ textAlign: 'center', textTransform: 'uppercase', marginBottom: spacing.md }}
-          >
-            how are you right now
-          </Text>
-          <MoodDeck onSend={(k) => void sendMood(k)} />
-        </View>
+        <Reveal delay={300} dy={16} soft>
+          <MoodDeck onSend={(k) => void sendMood(k)} partnerName={partnerName} />
+        </Reveal>
       </View>
     ),
     [
