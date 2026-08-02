@@ -25,7 +25,7 @@ import {
 } from '../../features/home';
 import {
   MoodCard,
-  MoodChips,
+  MoodDeck,
   latestPerAuthor,
   useMoods,
   useMoodSync,
@@ -124,7 +124,7 @@ export default function HomeTab() {
           >
             how are you right now
           </Text>
-          <MoodChips onPick={(k) => void sendMood(k)} />
+          <MoodDeck onSend={(k) => void sendMood(k)} />
         </View>
       </View>
     ),
