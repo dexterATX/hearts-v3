@@ -89,9 +89,9 @@ function Chip({ mood, onPick }: { mood: (typeof MOODS)[number]; onPick: (k: Mood
             paddingHorizontal: spacing.sm,
             borderWidth: 1,
             overflow: 'hidden',
-            // two squares per row, decently big — the grid below sizes us
-            width: '48%',
-            aspectRatio: 1,
+            // two tall cards per row, centered — taller than wide, never cramped
+            width: '46%',
+            aspectRatio: 0.8,
           },
           style,
         ]}
@@ -104,7 +104,7 @@ function Chip({ mood, onPick }: { mood: (typeof MOODS)[number]; onPick: (k: Mood
         <Animated.View
           style={[{ alignItems: 'center', gap: spacing.sm }, contentStyle]}
         >
-          <MoodBunny mood={mood.key} size={56} />
+          <MoodBunny mood={mood.key} size={64} />
           <Text variant="small" weight="medium" color={colors.ink}>
             {mood.label}
           </Text>

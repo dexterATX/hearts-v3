@@ -120,7 +120,7 @@ export default function HomeTab() {
           <Text
             variant="overline"
             color={colors.faint}
-            style={{ textAlign: 'center', textTransform: 'uppercase', marginBottom: -spacing.xs }}
+            style={{ textAlign: 'center', textTransform: 'uppercase', marginBottom: spacing.md }}
           >
             how are you right now
           </Text>
