@@ -5,6 +5,8 @@ import { useEffect, useState } from 'react';
 import { StyleSheet, Text as RNText, View, type ViewStyle } from 'react-native';
 import Animated, {
   cancelAnimation,
+  Easing,
+  interpolate,
   useAnimatedStyle,
   useReducedMotion,
   useSharedValue,
@@ -18,6 +20,9 @@ import { Card, Reveal, Skeleton, Text } from '../../../ui';
 import { colors, motion, radius, spacing } from '../../../theme/theme';
 import { moodMeta, latestPerAuthor } from '../model';
 import type { MoodRow } from '../../../lib/db/database.types';
+
+// the emoji's slow drift — one symmetric cycle every 5 seconds
+const BOB = { duration: 2500, easing: Easing.inOut(Easing.quad) };
 
 function timeAgo(iso: string): string {
   const mins = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60_000));
@@ -33,7 +38,7 @@ function timeAgo(iso: string): string {
 let uid = 0;
 
 // one box for all three states, so the card never changes shape under you
-const BOX: ViewStyle = { alignItems: 'center', paddingVertical: spacing.xxl, gap: spacing.sm };
+const BOX: ViewStyle = { alignItems: 'center', paddingVertical: spacing.lg, gap: spacing.xs };
 
 export function MoodCard({
   rows,
@@ -51,6 +56,7 @@ export function MoodCard({
   const pop = useSharedValue(1);
   const glow = useSharedValue(0.55);
   const breathe = useSharedValue(1);
+  const bob = useSharedValue(0);
   const reduced = useReducedMotion();
   const [glowId] = useState(() => `moodglow${uid++}`);
   const [, setTick] = useState(0);
@@ -75,13 +81,25 @@ export function MoodCard({
 
   // the glow breathes until the next mood arrives; gated on motion preference
   useEffect(() => {
-    if (!reduced) breathe.value = withRepeat(withTiming(0.85, { duration: 2400 }), -1, true);
-    return () => cancelAnimation(breathe);
+    if (!reduced) {
+      breathe.value = withRepeat(withTiming(0.85, { duration: 2400 }), -1, true);
+      // the emoji drifts a couple of pixels on a slow cycle — alive, not floating away
+      bob.value = withRepeat(withSequence(withTiming(1, BOB), withTiming(0, BOB)), -1, false);
+    }
+    return () => {
+      cancelAnimation(breathe);
+      cancelAnimation(bob);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps — shared values are stable
   }, [reduced]);
 
   const glowStyle = useAnimatedStyle(() => ({ opacity: glow.value * breathe.value }));
-  const popStyle = useAnimatedStyle(() => ({ transform: [{ scale: pop.value }] }));
+  const popStyle = useAnimatedStyle(() => ({
+    transform: [
+      { scale: pop.value },
+      { translateY: interpolate(bob.value, [0, 1], [0, -3]) },
+    ],
+  }));
 
   if (!partnerId) return null;
 
@@ -115,12 +133,12 @@ export function MoodCard({
   return (
     <Reveal delay={160} dy={14} scale>
       <Card variant="accent" style={BOX}>
-        <View style={{ width: 160, height: 144, alignItems: 'center', justifyContent: 'center' }}>
+        <View style={{ width: 128, height: 112, alignItems: 'center', justifyContent: 'center' }}>
           <Animated.View
             pointerEvents="none"
             style={[StyleSheet.absoluteFill, { alignItems: 'center', justifyContent: 'center' }, glowStyle]}
           >
-            <Svg width={160} height={144}>
+            <Svg width={128} height={112}>
               <Defs>
                 <RadialGradient id={glowId} cx="50%" cy="50%" r="50%">
                   <Stop offset="0%" stopColor={colors.blue} stopOpacity={0.55} />
@@ -128,12 +146,12 @@ export function MoodCard({
                   <Stop offset="100%" stopColor={colors.blue} stopOpacity={0} />
                 </RadialGradient>
               </Defs>
-              <Circle cx={80} cy={72} r={72} fill={`url(#${glowId})`} />
+              <Circle cx={64} cy={56} r={56} fill={`url(#${glowId})`} />
             </Svg>
           </Animated.View>
           {/* the mood emoji IS the content here — plain RNText, no themed primitive */}
           <Animated.View style={popStyle}>
-            <RNText style={{ fontSize: 76, lineHeight: 88 }}>{meta.emoji}</RNText>
+            <RNText style={{ fontSize: 64, lineHeight: 72 }}>{meta.emoji}</RNText>
           </Animated.View>
         </View>
         <Text variant="heading" color={colors.ink} style={{ textAlign: 'center' }}>

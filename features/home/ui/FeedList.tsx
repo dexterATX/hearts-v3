@@ -5,7 +5,7 @@
 // Rows are deliberately static: no entering animations and no shine in a
 // recycling list — the page's one accent surface is the MoodCard up top.
 import { Fragment } from 'react';
-import { RefreshControl, View } from 'react-native';
+import { Pressable, RefreshControl, View } from 'react-native';
 import { FlashList, type FlashListProps } from '@shopify/flash-list';
 import Animated, { useAnimatedScrollHandler, type SharedValue } from 'react-native-reanimated';
 import { Button, Card, Icon, Reveal, Skeleton, Text, type IconName } from '../../../ui';
@@ -45,6 +45,7 @@ export function FeedList({
   scrollY,
   refreshing,
   onRefresh,
+  onPressRow,
 }: {
   days: StoryDay[];
   loading: boolean;
@@ -55,6 +56,7 @@ export function FeedList({
   scrollY: SharedValue<number>;
   refreshing: boolean;
   onRefresh: () => void;
+  onPressRow?: (line: StoryLine) => void;
 }) {
   // Unconditional: the route's hero-recede reads scrollY even for empty states,
   // so this hook can never sit behind an early return.
@@ -117,7 +119,9 @@ export function FeedList({
           <FeedEmpty partnerName={partnerName} />
         )
       }
-      renderItem={({ item }) => <DayCard day={item} partnerName={partnerName} myId={myId} />}
+      renderItem={({ item }) => (
+        <DayCard day={item} partnerName={partnerName} myId={myId} onPressRow={onPressRow} />
+      )}
     />
   );
 }
@@ -127,10 +131,12 @@ function DayCard({
   day,
   partnerName,
   myId,
+  onPressRow,
 }: {
   day: StoryDay;
   partnerName: string;
   myId: string | null;
+  onPressRow?: (line: StoryLine) => void;
 }) {
   return (
     <Card variant="quiet" style={{ marginHorizontal: spacing.lg, marginBottom: spacing.sm }}>
@@ -152,7 +158,7 @@ function DayCard({
               }}
             />
           ) : null}
-          <StoryRow line={line} partnerName={partnerName} myId={myId} />
+          <StoryRow line={line} partnerName={partnerName} myId={myId} onPressRow={onPressRow} />
         </Fragment>
       ))}
     </Card>
@@ -163,17 +169,21 @@ function StoryRow({
   line,
   partnerName,
   myId,
+  onPressRow,
 }: {
   line: StoryLine;
   partnerName: string;
   myId: string | null;
+  onPressRow?: (line: StoryLine) => void;
 }) {
   const who = line.authorId === myId ? 'you' : partnerName;
   // The list's single accent: a voice note from them, unheard — new, for you,
   // playable now. Blue icon tile + chevron; every other row stays steel.
   const fresh = line.kind === 'voice' && line.authorId !== myId && !line.heard;
+  // mood trails are ambient — nothing to open; gifts deep-link somewhere real
+  const tappable = line.kind !== 'moods' && !!onPressRow;
 
-  return (
+  const row = (
     <View
       style={{
         flexDirection: 'row',
@@ -211,8 +221,26 @@ function StoryRow({
       <Text variant="caption" color={colors.faint}>
         {timeAgo(line.at)}
       </Text>
-      {fresh ? <Icon name="chevronRight" size={16} color={colors.blue} /> : null}
+      {fresh ? (
+        <Icon name="chevronRight" size={16} color={colors.blue} />
+      ) : tappable ? (
+        <Icon name="chevronRight" size={16} color={colors.faint} />
+      ) : null}
     </View>
+  );
+
+  if (!tappable) return row;
+  return (
+    <Pressable
+      accessibilityRole="button"
+      onPress={() => onPressRow(line)}
+      style={({ pressed }) => [
+        { marginHorizontal: -spacing.sm, paddingHorizontal: spacing.sm, borderRadius: radius.sm },
+        pressed ? { backgroundColor: colors.surfaceAlt } : null,
+      ]}
+    >
+      {row}
+    </Pressable>
   );
 }
 

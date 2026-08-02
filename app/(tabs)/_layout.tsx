@@ -70,6 +70,8 @@ export default function TabsLayout() {
         name="index"
         options={{
           title: 'home',
+          // the dashboard carries itself — a bare "home" title is wasted chrome
+          headerShown: false,
           tabBarIcon: ({ color }) => <TabIcon name="home" color={color} badge={0} />,
         }}
       />

@@ -39,3 +39,4 @@ supabase/.env
 # release signing — the keystore and its passwords never go in git
 credentials/
 .claude/
+credentials.json

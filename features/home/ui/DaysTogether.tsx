@@ -1,10 +1,10 @@
 // features/home/ui/DaysTogether.tsx — the day counter at the top of home.
 // The screen's showpiece: Sora numerals at mega size counting up on a soft
-// spring, two blue halos breathing behind them, and a hairline of the one
+// spring, a radial blue glow breathing behind them, and a hairline of the one
 // blue that draws in once the number lands. Chromeless — no card, no frame;
 // the obsidian page itself is the surface.
-import { useEffect } from 'react';
-import { TextInput, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { StyleSheet, TextInput, View } from 'react-native';
 import Animated, {
   cancelAnimation,
   Easing,
@@ -19,6 +19,7 @@ import Animated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
+import Svg, { Circle, Defs, RadialGradient, Stop } from 'react-native-svg';
 import { Reveal, Skeleton, Text } from '../../../ui';
 import { colors, motion, spacing, type } from '../../../theme/theme';
 import { daysTogether, daysLabel } from '../model';
@@ -27,9 +28,12 @@ import { daysTogether, daysLabel } from '../model';
 // the input every pass and drop the native drive
 const AnimatedTextInput = Animated.createAnimatedComponent(TextInput);
 
-// halo diameters — a wide soft wash and a brighter core, centred on the numeral
-const HALO_OUTER = spacing.huge * 5;
-const HALO_INNER = spacing.huge * 2.5;
+// the halo is a radial gradient, never a solid disc: a hard-edged circle reads
+// as a rendering bug, a glow that dissolves into the page reads as light
+const HALO = 320;
+
+// gradient ids resolve per document; every instance mints its own (MetallicFrame lesson)
+let uid = 0;
 
 // the one explicitly decorative loop on the page: a slow, symmetric breath
 const BREATH = { duration: 2600, easing: Easing.inOut(Easing.quad) };
@@ -86,14 +90,11 @@ export function DaysTogether({
     ],
   }));
 
-  const haloOuterStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(breathe.value, [0, 1], [0.55, 1]) * enter.value,
-    transform: [{ scale: interpolate(breathe.value, [0, 1], [1, 1.07]) }],
-  }));
+  const [glowId] = useState(() => `dayglow${uid++}`);
 
-  const haloInnerStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(breathe.value, [0, 1], [0.35, 1]) * enter.value,
-    transform: [{ scale: interpolate(breathe.value, [0, 1], [1, 1.035]) }],
+  const haloStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(breathe.value, [0, 1], [0.6, 1]) * enter.value,
+    transform: [{ scale: interpolate(breathe.value, [0, 1], [1, 1.06]) }],
   }));
 
   // the hairline stays collapsed until the numeral has mostly landed
@@ -103,7 +104,7 @@ export function DaysTogether({
 
   const container = {
     alignItems: 'center' as const,
-    paddingVertical: spacing.xxl,
+    paddingVertical: spacing.lg,
     paddingHorizontal: spacing.xl,
   };
 
@@ -138,37 +139,22 @@ export function DaysTogether({
           <Animated.View
             pointerEvents="none"
             style={[
-              {
-                position: 'absolute',
-                width: HALO_OUTER,
-                height: HALO_OUTER,
-                borderRadius: HALO_OUTER / 2,
-                backgroundColor: colors.blueSoft,
-                left: '50%',
-                top: '50%',
-                marginLeft: -HALO_OUTER / 2,
-                marginTop: -HALO_OUTER / 2,
-              },
-              haloOuterStyle,
+              StyleSheet.absoluteFill,
+              { alignItems: 'center', justifyContent: 'center' },
+              haloStyle,
             ]}
-          />
-          <Animated.View
-            pointerEvents="none"
-            style={[
-              {
-                position: 'absolute',
-                width: HALO_INNER,
-                height: HALO_INNER,
-                borderRadius: HALO_INNER / 2,
-                backgroundColor: colors.blueGlow,
-                left: '50%',
-                top: '50%',
-                marginLeft: -HALO_INNER / 2,
-                marginTop: -HALO_INNER / 2,
-              },
-              haloInnerStyle,
-            ]}
-          />
+          >
+            <Svg width={HALO} height={HALO}>
+              <Defs>
+                <RadialGradient id={glowId} cx="50%" cy="50%" r="50%">
+                  <Stop offset="0%" stopColor={colors.blue} stopOpacity={0.22} />
+                  <Stop offset="55%" stopColor={colors.blue} stopOpacity={0.08} />
+                  <Stop offset="100%" stopColor={colors.blue} stopOpacity={0} />
+                </RadialGradient>
+              </Defs>
+              <Circle cx={HALO / 2} cy={HALO / 2} r={HALO / 2} fill={`url(#${glowId})`} />
+            </Svg>
+          </Animated.View>
           <Animated.View style={numeralWrapStyle}>
             <AnimatedTextInput
               editable={false}

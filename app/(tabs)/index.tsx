@@ -1,7 +1,8 @@
 // app/(tabs)/index.tsx — home: the choreographed dashboard (presence, days hero, live mood) above the grouped story; FeedList is the one scroller, the hero recedes into a mini pill on scroll.
 import { useMemo } from 'react';
-import { View } from 'react-native';
+import { Text as RNText, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { router } from 'expo-router';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -22,8 +23,17 @@ import {
   useFeed,
   useHomeSync,
 } from '../../features/home';
-import { MoodCard, MoodChips, useMoods, useMoodSync, useSendMood } from '../../features/mood';
-import { PresenceChip, usePublishPresence } from '../../features/presence';
+import {
+  MoodCard,
+  MoodChips,
+  latestPerAuthor,
+  moodMeta,
+  useMoods,
+  useMoodSync,
+  useSendMood,
+} from '../../features/mood';
+import { PresenceChip, usePartnerPresence, usePublishPresence } from '../../features/presence';
+import type { StoryLine } from '../../features/home';
 
 // Scroll distance over which the hero counter fades/shrinks into the pill.
 const HERO_RANGE = 160;
@@ -39,9 +49,20 @@ export default function HomeTab() {
   const partnerId = useSession((s) => s.partner?.id ?? null);
   const myId = useSession((s) => s.userId);
   const partnerName = usePartnerName();
+  const partnerHere = usePartnerPresence();
 
   const scrollY = useSharedValue(0);
   const reduced = useReducedMotion();
+
+  // the mini pill's payload: days, plus who's here and how they feel right now
+  const partnerMood = partnerId
+    ? latestPerAuthor(moods.data ?? []).get(partnerId)?.mood
+    : undefined;
+
+  const onPressRow = (line: StoryLine) => {
+    if (line.kind === 'letter') router.push(`/letters/${line.id}`);
+    else router.push('/(tabs)/us'); // voice + photo both live on the us tab
+  };
 
   // Hero recede: the big counter quietly falls back as the story takes over.
   const heroStyle = useAnimatedStyle(() =>
@@ -100,7 +121,7 @@ export default function HomeTab() {
           <Text
             variant="overline"
             color={colors.faint}
-            style={{ textAlign: 'center', textTransform: 'uppercase', marginBottom: -spacing.md }}
+            style={{ textAlign: 'center', textTransform: 'uppercase', marginBottom: -spacing.xs }}
           >
             how are you right now
           </Text>
@@ -135,6 +156,7 @@ export default function HomeTab() {
         scrollY={scrollY}
         refreshing={feed.isRefetching}
         onRefresh={() => void feed.refetch()}
+        onPressRow={onPressRow}
       />
       <Animated.View
         pointerEvents="none"
@@ -156,9 +178,22 @@ export default function HomeTab() {
             borderColor: colors.line,
           }}
         >
+          {partnerHere ? (
+            <View
+              style={{
+                width: 6,
+                height: 6,
+                borderRadius: radius.pill,
+                backgroundColor: colors.blue,
+              }}
+            />
+          ) : null}
           <Text variant="overline" color={colors.silver} style={{ textTransform: 'uppercase' }}>
             {daysLabel(daysTogether(couple.data?.anniversary_date ?? null))}
           </Text>
+          {partnerMood ? (
+            <RNText style={{ fontSize: 12, lineHeight: 14 }}>{moodMeta(partnerMood).emoji}</RNText>
+          ) : null}
         </View>
       </Animated.View>
     </SafeAreaView>
