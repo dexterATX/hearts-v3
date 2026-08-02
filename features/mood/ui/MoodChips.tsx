@@ -143,7 +143,7 @@ export function MoodChips({ onPick }: { onPick: (k: MoodKey) => void }) {
   // two cards per row, centered as a pair: (screen − side padding − one gap) / 2,
   // then a hair narrower so the pair visibly floats in the middle
   const cardW = (width - spacing.lg * 2 - spacing.lg) / 2;
-  const cardH = cardW * 1.05; // just past square — short and calm, not a tower
+  const cardH = cardW * 0.85; // content + ~1cm of vertical air, nothing more
 
   return (
     <Reveal delay={240} dy={12}>
