@@ -1,6 +1,6 @@
 // app/(tabs)/index.tsx — home: the choreographed dashboard (presence, days hero, live mood) above the grouped story; FeedList is the one scroller, the hero recedes into a mini pill on scroll.
 import { useMemo } from 'react';
-import { Text as RNText, View } from 'react-native';
+import { View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import Animated, {
@@ -11,7 +11,7 @@ import Animated, {
   Extrapolation,
 } from 'react-native-reanimated';
 import { colors, radius, spacing } from '../../theme/theme';
-import { Text } from '../../ui';
+import { MoodBunny, Text } from '../../ui';
 import { useSession, usePartnerName } from '../../lib/session/store';
 import {
   DaysTogether,
@@ -27,7 +27,6 @@ import {
   MoodCard,
   MoodChips,
   latestPerAuthor,
-  moodMeta,
   useMoods,
   useMoodSync,
   useSendMood,
@@ -192,7 +191,7 @@ export default function HomeTab() {
             {daysLabel(daysTogether(couple.data?.anniversary_date ?? null))}
           </Text>
           {partnerMood ? (
-            <RNText style={{ fontSize: 12, lineHeight: 14 }}>{moodMeta(partnerMood).emoji}</RNText>
+            <MoodBunny mood={partnerMood} size={16} />
           ) : null}
         </View>
       </Animated.View>

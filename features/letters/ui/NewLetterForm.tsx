@@ -1,7 +1,7 @@
 // features/letters/ui/NewLetterForm.tsx — write, seal, choose the lock.
 import { useState } from 'react';
 import { View, ScrollView, Pressable } from 'react-native';
-import { Text, Button, Card, Input, Icon } from '../../../ui';
+import { Text, Button, Card, Input, Icon, MoodBunny } from '../../../ui';
 import { colors, spacing, radius } from '../../../theme/theme';
 import { MOODS } from '../../../lib/moods';
 import { useSendLetter } from '../hooks';
@@ -184,8 +184,9 @@ export function NewLetterForm({ onSent }: { onSent: () => void }) {
                     paddingHorizontal: spacing.md,
                   }}
                 >
+                  <MoodBunny mood={m.key} size={16} />
                   <Text variant="small" color={on ? colors.blue : colors.ink}>
-                    {m.emoji} {m.label}
+                    {m.label}
                   </Text>
                 </Pressable>
               );

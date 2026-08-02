@@ -8,9 +8,8 @@ import { Fragment } from 'react';
 import { Pressable, RefreshControl, View } from 'react-native';
 import { FlashList, type FlashListProps } from '@shopify/flash-list';
 import Animated, { useAnimatedScrollHandler, type SharedValue } from 'react-native-reanimated';
-import { Button, Card, Icon, Reveal, Skeleton, Text, type IconName } from '../../../ui';
+import { Button, Card, Icon, MoodBunny, Reveal, Skeleton, Text, type IconName } from '../../../ui';
 import { colors, radius, spacing } from '../../../theme/theme';
-import { moodMeta } from '../../../lib/moods';
 import { feedLine, timeAgo, type StoryDay, type StoryLine } from '../model';
 
 const AnimatedFlashList = Animated.createAnimatedComponent(
@@ -208,16 +207,32 @@ function StoryRow({
       ) : (
         <Icon name={iconFor(line.kind)} size={16} color={colors.muted} />
       )}
-      <Text variant="small" color={colors.muted} numberOfLines={1} style={{ flex: 1 }}>
-        <Text variant="small" weight="medium" color={colors.ink}>
-          {who}
-        </Text>
-        {line.kind === 'moods' ? (
+      {line.kind === 'moods' ? (
+        <View
+          style={{
+            flex: 1,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: spacing.xs,
+            overflow: 'hidden',
+          }}
+        >
+          <Text variant="small" color={colors.muted} numberOfLines={1}>
+            <Text variant="small" weight="medium" color={colors.ink}>
+              {who}
+            </Text>
+            {' felt'}
+          </Text>
           <MoodTrail steps={line.steps} />
-        ) : (
-          feedRest(line, partnerName, myId, who)
-        )}
-      </Text>
+        </View>
+      ) : (
+        <Text variant="small" color={colors.muted} numberOfLines={1} style={{ flex: 1 }}>
+          <Text variant="small" weight="medium" color={colors.ink}>
+            {who}
+          </Text>
+          {feedRest(line, partnerName, myId, who)}
+        </Text>
+      )}
       <Text variant="caption" color={colors.faint}>
         {timeAgo(line.at)}
       </Text>
@@ -244,14 +259,15 @@ function StoryRow({
   );
 }
 
-/** ` felt ` plus the emoji trail; long runs cap at 6 emojis and a faint ` +n`. */
+/** the trail of bunnies showing the run; long runs cap at 6 and a faint ` +n`. */
 function MoodTrail({ steps }: { steps: string[] }) {
   const shown = steps.slice(0, MOOD_TRAIL_CAP);
   const extra = steps.length - shown.length;
   return (
     <>
-      {' felt '}
-      {shown.map((s) => moodMeta(s).emoji).join(' ')}
+      {shown.map((s, i) => (
+        <MoodBunny key={`${s}-${i}`} mood={s} size={18} />
+      ))}
       {extra > 0 ? (
         <Text variant="small" color={colors.faint}>{` +${extra}`}</Text>
       ) : null}

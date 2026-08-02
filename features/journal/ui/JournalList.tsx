@@ -1,7 +1,7 @@
 // features/journal/ui/JournalList.tsx — shared + private entries, calendar days.
 import { useState } from 'react';
 import { View, Pressable, ScrollView } from 'react-native';
-import { Text, Card, Button, Input, Icon, SkeletonCard } from '../../../ui';
+import { Text, Card, Button, Input, Icon, MoodBunny, SkeletonCard } from '../../../ui';
 import { colors, spacing, radius } from '../../../theme/theme';
 import { MOODS, moodMeta } from '../../../lib/moods';
 import { useJournal, useAddEntry, useDeleteEntry } from '../hooks';
@@ -36,9 +36,12 @@ function EntryCard({ entry, myId }: { entry: JournalEntryRow; myId: string }) {
             </View>
           ) : null}
           {meta ? (
-            <Text variant="caption" color={colors.muted}>
-              {meta.emoji} {meta.label}
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+              <MoodBunny mood={entry.mood as string} size={16} />
+              <Text variant="caption" color={colors.muted}>
+                {meta.label}
+              </Text>
+            </View>
           ) : null}
         </View>
         {entry.author_id === myId ? (
@@ -115,8 +118,9 @@ function NewEntryCard() {
                   paddingHorizontal: spacing.md,
                 }}
               >
+                <MoodBunny mood={m.key} size={16} />
                 <Text variant="caption" color={active ? colors.blue : colors.muted}>
-                  {m.emoji} {m.label}
+                  {m.label}
                 </Text>
               </View>
             </Pressable>

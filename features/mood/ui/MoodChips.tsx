@@ -17,7 +17,7 @@ import Animated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
-import { Icon, Reveal, Text } from '../../../ui';
+import { Icon, MoodBunny, Reveal, Text } from '../../../ui';
 import { colors, spacing, radius, motion } from '../../../theme/theme';
 import { MOODS, type MoodKey } from '../model';
 
@@ -97,11 +97,11 @@ function Chip({ mood, onPick }: { mood: (typeof MOODS)[number]; onPick: (k: Mood
           pointerEvents="none"
           style={[StyleSheet.absoluteFill, { backgroundColor: colors.blueGlow }, haloStyle]}
         />
-        {/* the mood emoji IS the content — chrome emoji went, these stay */}
+        {/* the bunny IS the mood — chrome emoji went, illustrations stay */}
         <Animated.View
           style={[{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }, contentStyle]}
         >
-          <Text style={{ fontSize: 15, lineHeight: 21 }}>{mood.emoji}</Text>
+          <MoodBunny mood={mood.key} size={22} />
           <Text variant="small" weight="medium" color={colors.ink}>
             {mood.label}
           </Text>

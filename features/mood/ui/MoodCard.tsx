@@ -16,7 +16,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import Svg, { Circle, Defs, RadialGradient, Stop } from 'react-native-svg';
-import { Card, Reveal, Skeleton, Text } from '../../../ui';
+import { Card, MoodBunny, Reveal, Skeleton, Text } from '../../../ui';
 import { colors, motion, radius, spacing } from '../../../theme/theme';
 import { moodMeta, latestPerAuthor } from '../model';
 import type { MoodRow } from '../../../lib/db/database.types';
@@ -149,9 +149,9 @@ export function MoodCard({
               <Circle cx={64} cy={56} r={56} fill={`url(#${glowId})`} />
             </Svg>
           </Animated.View>
-          {/* the mood emoji IS the content here — plain RNText, no themed primitive */}
+          {/* the bunny IS the mood — the page's emotional payload */}
           <Animated.View style={popStyle}>
-            <RNText style={{ fontSize: 64, lineHeight: 72 }}>{meta.emoji}</RNText>
+            <MoodBunny mood={latest.mood} size={64} />
           </Animated.View>
         </View>
         <Text variant="heading" color={colors.ink} style={{ textAlign: 'center' }}>
