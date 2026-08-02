@@ -9,13 +9,13 @@ import type { ImageStyle } from 'expo-image';
 import { Text as RNText } from 'react-native';
 
 const BUNNIES: Record<string, number> = {
-  loved: require('../../assets/moods/loved.png'),
-  missing: require('../../assets/moods/missing.png'),
-  happy: require('../../assets/moods/happy.png'),
-  playful: require('../../assets/moods/playful.png'),
-  sleepy: require('../../assets/moods/sleepy.png'),
-  grumpy: require('../../assets/moods/grumpy.png'),
-  stressed: require('../../assets/moods/stressed.png'),
+  loved: require('./bunnies/loved.png'),
+  missing: require('./bunnies/missing.png'),
+  happy: require('./bunnies/happy.png'),
+  playful: require('./bunnies/playful.png'),
+  sleepy: require('./bunnies/sleepy.png'),
+  grumpy: require('./bunnies/grumpy.png'),
+  stressed: require('./bunnies/stressed.png'),
 };
 
 export function MoodBunny({
