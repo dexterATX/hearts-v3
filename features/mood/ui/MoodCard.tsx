@@ -45,11 +45,17 @@ export function MoodCard({
   partnerId,
   partnerName,
   loading = false,
+  daysText = null,
+  presenceText = null,
 }: {
   rows: MoodRow[];
   partnerId: string | null;
   partnerName: string;
   loading?: boolean;
+  /** "212 days of us" — the counter, folded into the panel */
+  daysText?: string | null;
+  /** "on the home screen" — live presence, folded into the panel */
+  presenceText?: string | null;
 }) {
   const latest = partnerId ? latestPerAuthor(rows).get(partnerId) : undefined;
 
@@ -196,9 +202,37 @@ export function MoodCard({
               {meta.label}
             </Text>
           </Text>
-          <Text variant="caption" color={colors.faint}>
-            {timeAgo(latest.created_at)}
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+            <Text variant="caption" color={colors.faint}>
+              {timeAgo(latest.created_at)}
+            </Text>
+            {presenceText ? (
+              <>
+                <Text variant="caption" color={colors.faint}>
+                  {' · '}
+                </Text>
+                <View
+                  style={{
+                    width: 6,
+                    height: 6,
+                    borderRadius: radius.pill,
+                    backgroundColor: colors.blue,
+                  }}
+                />
+                <Text variant="caption" color={colors.muted} numberOfLines={1} style={{ flexShrink: 1 }}>
+                  {presenceText}
+                </Text>
+              </>
+            ) : null}
+          </View>
+          {daysText ? (
+            <>
+              <View style={{ height: 1, backgroundColor: colors.line, marginVertical: spacing.sm }} />
+              <Text variant="title" weight="displaySemi" color={colors.ink}>
+                {daysText}
+              </Text>
+            </>
+          ) : null}
           {today.length > 1 ? (
             <>
               <View style={{ height: 1, backgroundColor: colors.line, marginVertical: spacing.sm }} />

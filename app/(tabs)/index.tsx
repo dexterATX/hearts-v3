@@ -1,4 +1,6 @@
-// app/(tabs)/index.tsx — home: the choreographed dashboard (presence, days hero, live mood) above the grouped story; FeedList is the one scroller, the hero recedes into a mini pill on scroll.
+// app/(tabs)/index.tsx — home: one overview panel (mood + days + presence) and
+// the mood deck above the grouped story; FeedList is the one scroller, a mini
+// status pill fades in on scroll so the dashboard never fully leaves.
 import { useMemo } from 'react';
 import { View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -14,7 +16,6 @@ import { colors, radius, spacing } from '../../theme/theme';
 import { MoodBunny, Reveal, Text } from '../../ui';
 import { useSession, usePartnerName } from '../../lib/session/store';
 import {
-  DaysTogether,
   FeedList,
   OutboxBanner,
   daysTogether,
@@ -31,7 +32,7 @@ import {
   useMoodSync,
   useSendMood,
 } from '../../features/mood';
-import { PresenceChip, usePartnerPresence, usePublishPresence } from '../../features/presence';
+import { describePresence, usePartnerPresence, usePublishPresence } from '../../features/presence';
 import type { StoryLine } from '../../features/home';
 
 // Scroll distance over which the hero counter fades/shrinks into the pill.
@@ -58,25 +59,17 @@ export default function HomeTab() {
     ? latestPerAuthor(moods.data ?? []).get(partnerId)?.mood
     : undefined;
 
+  // the overview panel's folded-in read-outs
+  const days = daysTogether(couple.data?.anniversary_date ?? null);
+  const daysText = days === null ? null : days === 0 ? 'day one. today. ♥' : `${days} days of us`;
+  const presenceText = partnerHere ? describePresence(partnerHere) : null;
+
   const onPressRow = (line: StoryLine) => {
     if (line.kind === 'letter') router.push(`/letters/${line.id}`);
     else router.push('/(tabs)/us'); // voice + photo both live on the us tab
   };
 
-  // Hero recede: the big counter quietly falls back as the story takes over.
-  const heroStyle = useAnimatedStyle(() =>
-    reduced
-      ? {}
-      : {
-          opacity: interpolate(scrollY.value, [0, HERO_RANGE * 0.75], [1, 0.15], Extrapolation.CLAMP),
-          transform: [
-            { scale: interpolate(scrollY.value, [0, HERO_RANGE], [1, 0.88], Extrapolation.CLAMP) },
-            { translateY: interpolate(scrollY.value, [0, HERO_RANGE], [0, -14], Extrapolation.CLAMP) },
-          ],
-        },
-  );
-
-  // Mini status pill: the counter's understudy, fading in as the hero exits.
+  // Mini status pill: the counter's understudy, fading in as you scroll past the panel.
   const miniStyle = useAnimatedStyle(() =>
     reduced
       ? { opacity: 0 }
@@ -104,16 +97,14 @@ export default function HomeTab() {
     () => (
       <View style={{ gap: spacing.lg, paddingTop: spacing.md, paddingBottom: spacing.xl }}>
         <OutboxBanner />
-        <PresenceChip />
-        <Animated.View style={heroStyle}>
-          <DaysTogether anniversary={couple.data?.anniversary_date ?? null} loading={couple.isPending} />
-        </Animated.View>
         <View style={{ paddingHorizontal: spacing.lg }}>
           <MoodCard
             rows={moods.data ?? []}
             partnerId={partnerId}
             partnerName={partnerName}
             loading={moods.isPending}
+            daysText={daysText}
+            presenceText={presenceText}
           />
         </View>
         <Reveal delay={300} dy={16} soft>
@@ -122,17 +113,16 @@ export default function HomeTab() {
       </View>
     ),
     [
-      couple.data?.anniversary_date,
-      couple.isPending,
       moods.data,
       moods.isPending,
       partnerId,
       partnerName,
+      daysText,
+      presenceText,
       myId,
       feed.error,
       feed.isPending,
       sendMood,
-      heroStyle,
     ],
   );
 
