@@ -1,7 +1,9 @@
-// features/mood/ui/MoodCard.tsx — her live mood on my home screen (§7.2).
-// The one highlighted thing on the page, so it takes the accent surface:
-// a big emoji over a breathing radial glow, popping in whenever the mood changes.
-import { useEffect, useState } from 'react';
+// features/mood/ui/MoodCard.tsx — her live mood as an overview panel.
+// The page's one accent surface: a lit left panel carrying the bunny over a
+// breathing radial glow (popping in whenever the mood changes), and a right
+// rail with the read-out — what she feels, when it landed, and the trail of
+// her day so far.
+import { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, Text as RNText, View, type ViewStyle } from 'react-native';
 import Animated, {
   cancelAnimation,
@@ -21,9 +23,6 @@ import { colors, motion, radius, spacing } from '../../../theme/theme';
 import { moodMeta, latestPerAuthor } from '../model';
 import type { MoodRow } from '../../../lib/db/database.types';
 
-// the emoji's slow drift — one symmetric cycle every 5 seconds
-const BOB = { duration: 2500, easing: Easing.inOut(Easing.quad) };
-
 function timeAgo(iso: string): string {
   const mins = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60_000));
   if (mins < 1) return 'just now';
@@ -33,12 +32,13 @@ function timeAgo(iso: string): string {
   return `${Math.round(hours / 24)}d ago`;
 }
 
-// gradient ids resolve per document; a shared literal collides once several
-// glows are on screen at once, so every instance mints its own (see MetallicFrame)
+// gradient ids resolve per document; every instance mints its own
 let uid = 0;
 
-// one box for all three states, so the card never changes shape under you
-const BOX: ViewStyle = { alignItems: 'center', paddingVertical: spacing.lg, gap: spacing.xs };
+// the emoji's slow drift — one symmetric cycle every 5 seconds
+const BOB = { duration: 2500, easing: Easing.inOut(Easing.quad) };
+
+const PANEL: ViewStyle = { flexDirection: 'row', alignItems: 'stretch', padding: 0 };
 
 export function MoodCard({
   rows,
@@ -52,6 +52,17 @@ export function MoodCard({
   loading?: boolean;
 }) {
   const latest = partnerId ? latestPerAuthor(rows).get(partnerId) : undefined;
+
+  // her trail today, oldest → newest (the current mood included, capped at 5)
+  const today = useMemo(() => {
+    if (!partnerId) return [];
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    return rows
+      .filter((r) => r.author_id === partnerId && new Date(r.created_at).getTime() >= start)
+      .sort((a, b) => a.created_at.localeCompare(b.created_at))
+      .slice(-5);
+  }, [rows, partnerId]);
 
   const pop = useSharedValue(1);
   const glow = useSharedValue(0.55);
@@ -79,11 +90,10 @@ export function MoodCard({
     // eslint-disable-next-line react-hooks/exhaustive-deps — shared values are stable
   }, [latest?.id, reduced]);
 
-  // the glow breathes until the next mood arrives; gated on motion preference
+  // the glow breathes and the bunny drifts, until the next mood arrives
   useEffect(() => {
     if (!reduced) {
       breathe.value = withRepeat(withTiming(0.85, { duration: 2400 }), -1, true);
-      // the emoji drifts a couple of pixels on a slow cycle — alive, not floating away
       bob.value = withRepeat(withSequence(withTiming(1, BOB), withTiming(0, BOB)), -1, false);
     }
     return () => {
@@ -106,10 +116,15 @@ export function MoodCard({
   if (loading) {
     return (
       <Reveal delay={160} dy={14} scale>
-        <Card variant="accent" style={BOX}>
-          <Skeleton width={44} height={44} style={{ borderRadius: radius.pill }} />
-          <Skeleton width="60%" height={22} />
-          <Skeleton width={80} height={11} />
+        <Card variant="accent" style={PANEL}>
+          <View style={{ width: 132, alignItems: 'center', justifyContent: 'center', paddingVertical: spacing.xl }}>
+            <Skeleton width={64} height={64} style={{ borderRadius: radius.pill }} />
+          </View>
+          <View style={{ flex: 1, justifyContent: 'center', gap: spacing.sm, padding: spacing.lg }}>
+            <Skeleton width="45%" height={11} />
+            <Skeleton width="70%" height={22} />
+            <Skeleton width="35%" height={11} />
+          </View>
         </Card>
       </Reveal>
     );
@@ -118,12 +133,15 @@ export function MoodCard({
   if (!latest) {
     return (
       <Reveal delay={160} dy={14} scale>
-        <Card variant="quiet" style={BOX}>
-          {/* emoji is content, not chrome — plain RNText so no fontFamily fights it */}
-          <RNText style={{ fontSize: 56, lineHeight: 64, opacity: 0.45 }}>💭</RNText>
-          <Text variant="body" color={colors.muted} style={{ textAlign: 'center' }}>
-            {partnerName} has not sent a mood yet — the first one lands here the moment they tap it.
-          </Text>
+        <Card variant="quiet" style={PANEL}>
+          <View style={{ width: 132, alignItems: 'center', justifyContent: 'center', paddingVertical: spacing.xl }}>
+            <RNText style={{ fontSize: 44, lineHeight: 52, opacity: 0.45 }}>💭</RNText>
+          </View>
+          <View style={{ flex: 1, justifyContent: 'center', padding: spacing.lg }}>
+            <Text variant="body" color={colors.muted}>
+              {partnerName} has not sent a mood yet — the first one lands here the moment they tap it.
+            </Text>
+          </View>
         </Card>
       </Reveal>
     );
@@ -132,13 +150,26 @@ export function MoodCard({
   const meta = moodMeta(latest.mood);
   return (
     <Reveal delay={160} dy={14} scale>
-      <Card variant="accent" style={BOX}>
-        <View style={{ width: 160, height: 144, alignItems: 'center', justifyContent: 'center' }}>
+      <Card variant="accent" style={PANEL}>
+        {/* the left panel: the bunny, lit, on its own stage */}
+        <View
+          style={{
+            width: 132,
+            alignItems: 'center',
+            justifyContent: 'center',
+            paddingVertical: spacing.lg,
+            borderRightWidth: 1,
+            borderRightColor: colors.lineBright,
+            backgroundColor: colors.blueSoft,
+            borderTopLeftRadius: radius.md - 3.5,
+            borderBottomLeftRadius: radius.md - 3.5,
+          }}
+        >
           <Animated.View
             pointerEvents="none"
             style={[StyleSheet.absoluteFill, { alignItems: 'center', justifyContent: 'center' }, glowStyle]}
           >
-            <Svg width={160} height={144}>
+            <Svg width={132} height={120}>
               <Defs>
                 <RadialGradient id={glowId} cx="50%" cy="50%" r="50%">
                   <Stop offset="0%" stopColor={colors.blue} stopOpacity={0.55} />
@@ -146,20 +177,42 @@ export function MoodCard({
                   <Stop offset="100%" stopColor={colors.blue} stopOpacity={0} />
                 </RadialGradient>
               </Defs>
-              <Circle cx={80} cy={72} r={72} fill={`url(#${glowId})`} />
+              <Circle cx={66} cy={60} r={60} fill={`url(#${glowId})`} />
             </Svg>
           </Animated.View>
-          {/* the bunny IS the mood — the page's emotional payload */}
           <Animated.View style={popStyle}>
-            <MoodBunny mood={latest.mood} size={96} />
+            <MoodBunny mood={latest.mood} size={88} />
           </Animated.View>
         </View>
-        <Text variant="heading" color={colors.ink} style={{ textAlign: 'center' }}>
-          {partnerName} feels {meta.label}
-        </Text>
-        <Text variant="caption" color={colors.faint}>
-          {timeAgo(latest.created_at)}
-        </Text>
+
+        {/* the right rail: the read-out + her trail today */}
+        <View style={{ flex: 1, justifyContent: 'center', gap: spacing.xs, padding: spacing.lg }}>
+          <Text variant="overline" color={colors.faint} style={{ textTransform: 'uppercase' }}>
+            right now
+          </Text>
+          <Text variant="heading" color={colors.ink}>
+            {partnerName} feels{' '}
+            <Text variant="heading" weight="bold" color={colors.blue}>
+              {meta.label}
+            </Text>
+          </Text>
+          <Text variant="caption" color={colors.faint}>
+            {timeAgo(latest.created_at)}
+          </Text>
+          {today.length > 1 ? (
+            <>
+              <View style={{ height: 1, backgroundColor: colors.line, marginVertical: spacing.sm }} />
+              <Text variant="overline" color={colors.faint} style={{ textTransform: 'uppercase' }}>
+                earlier today
+              </Text>
+              <View style={{ flexDirection: 'row', gap: spacing.sm, alignItems: 'center' }}>
+                {today.slice(0, -1).map((r) => (
+                  <MoodBunny key={r.id} mood={r.mood} size={22} />
+                ))}
+              </View>
+            </>
+          ) : null}
+        </View>
       </Card>
     </Reveal>
   );
