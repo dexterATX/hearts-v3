@@ -115,7 +115,7 @@ function Chip({
           style={[{ alignItems: 'center', gap: spacing.sm }, contentStyle]}
         >
           <MoodBunny mood={mood.key} size={64} />
-          <Text variant="small" weight="medium" color={colors.ink}>
+          <Text variant="body" weight="displaySemi" color={colors.ink} style={{ letterSpacing: 0.3 }}>
             {mood.label}
           </Text>
         </Animated.View>
@@ -143,7 +143,7 @@ export function MoodChips({ onPick }: { onPick: (k: MoodKey) => void }) {
   // two cards per row, centered as a pair: (screen − side padding − one gap) / 2,
   // then a hair narrower so the pair visibly floats in the middle
   const cardW = (width - spacing.lg * 2 - spacing.lg) / 2;
-  const cardH = cardW * 1.25; // taller than wide, ~25% longer than the old squares
+  const cardH = cardW * 1.05; // just past square — short and calm, not a tower
 
   return (
     <Reveal delay={240} dy={12}>
