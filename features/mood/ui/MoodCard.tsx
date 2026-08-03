@@ -192,20 +192,17 @@ export function MoodCard({
           </Animated.View>
         </View>
 
-        {/* the right rail: the read-out + her trail today */}
+        {/* the right rail: her mood is the headline, everything else supports it */}
         <View style={{ flex: 1, justifyContent: 'center', gap: spacing.xs, padding: spacing.lg }}>
           <Text variant="overline" color={colors.faint} style={{ textTransform: 'uppercase' }}>
-            right now
+            her mood
           </Text>
-          <Text variant="heading" color={colors.ink}>
-            {partnerName} feels{' '}
-            <Text variant="heading" weight="bold" color={colors.blue}>
-              {meta.label}
-            </Text>
+          <Text variant="title" weight="displaySemi" color={colors.blue}>
+            {meta.label}
           </Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
-            <Text variant="caption" color={colors.faint}>
-              {timeAgo(latest.created_at)}
+            <Text variant="caption" color={colors.muted}>
+              {partnerName} · {timeAgo(latest.created_at)}
             </Text>
             {presenceText ? (
               <>
@@ -229,9 +226,20 @@ export function MoodCard({
           {daysText ? (
             <>
               <View style={{ height: 1, backgroundColor: colors.line, marginVertical: spacing.sm }} />
-              <Text variant="title" weight="displaySemi" color={colors.ink}>
-                {daysText}
-              </Text>
+              {/^\d/.test(daysText) ? (
+                <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: spacing.xs }}>
+                  <Text variant="title" weight="displaySemi" color={colors.ink}>
+                    {daysText.split(' ')[0]}
+                  </Text>
+                  <Text variant="caption" color={colors.muted}>
+                    days of us
+                  </Text>
+                </View>
+              ) : (
+                <Text variant="body" weight="displaySemi" color={colors.ink}>
+                  {daysText}
+                </Text>
+              )}
             </>
           ) : null}
           {today.length > 1 ? (
