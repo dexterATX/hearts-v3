@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { View, type ViewStyle } from 'react-native';
 import Animated, {
+  cancelAnimation,
   useSharedValue,
   useAnimatedStyle,
   withRepeat,
@@ -24,6 +25,7 @@ export function Skeleton({
 
   useEffect(() => {
     shimmer.value = withRepeat(withTiming(1, { duration: 1200 }), -1, true);
+    return () => cancelAnimation(shimmer);
   }, [shimmer]);
 
   const animatedStyle = useAnimatedStyle(() => ({

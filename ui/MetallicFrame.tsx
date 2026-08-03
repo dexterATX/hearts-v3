@@ -15,6 +15,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { StyleSheet, View, type ViewStyle } from 'react-native';
 import Animated, {
+  cancelAnimation,
   Easing,
   useAnimatedStyle,
   useSharedValue,
@@ -122,6 +123,9 @@ export function MetallicFrame({
       -1,
       false,
     );
+    // cancel on unmount or when shine turns off — a repeat otherwise outlives
+    // the card (every restack leaked one phantom sweeper per send)
+    return () => cancelAnimation(sweep);
   }, [reduced, shine, box.w, sweep]);
 
   const sheen = useAnimatedStyle(() => ({

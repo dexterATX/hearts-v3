@@ -4,7 +4,7 @@
 // nests this list inside a ScrollView (which would kill virtualization).
 // Rows are deliberately static: no entering animations and no shine in a
 // recycling list — the page's one accent surface is the MoodCard up top.
-import { Fragment } from 'react';
+import { Fragment, memo } from 'react';
 import { Pressable, RefreshControl, View } from 'react-native';
 import { FlashList, type FlashListProps } from '@shopify/flash-list';
 import Animated, { useAnimatedScrollHandler, type SharedValue } from 'react-native-reanimated';
@@ -126,7 +126,7 @@ export function FeedList({
 }
 
 /** One quiet card per day: an overline label, then bare rows split by hairlines. */
-function DayCard({
+const DayCard = memo(function DayCard({
   day,
   partnerName,
   myId,
@@ -162,7 +162,7 @@ function DayCard({
       ))}
     </Card>
   );
-}
+});
 
 function StoryRow({
   line,

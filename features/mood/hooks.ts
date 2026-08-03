@@ -2,7 +2,7 @@
 // Path: optimistic setQueryData → durable outbox op → bus broadcast (fast path).
 // Offline catch-up: the outbox flushes when connectivity returns; reconcile
 // refetches; her phone patches its cache from the postgres_changes catch-up.
-import { useEffect } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { useSession } from '../../lib/session/store';
@@ -78,30 +78,35 @@ export function useSendMood() {
   const userId = useSession((s) => s.userId);
   const queryClient = useQueryClient();
 
-  return async (mood: MoodKey) => {
-    if (!coupleId || !userId) return;
-    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); // §5: heavy on mood ping — fire-and-forget, never gate the optimistic write on a haptic promise
+  // stable identity — a fresh closure every render rebuilt the whole home
+  // header (and the deck) on every presence tick
+  return useCallback(
+    async (mood: MoodKey) => {
+      if (!coupleId || !userId) return;
+      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); // §5: heavy on mood ping — fire-and-forget, never gate the optimistic write on a haptic promise
 
-    // 1. optimistic: my chip lands on my screen NOW
-    const optimistic: MoodRow = {
-      id: `optimistic-${Date.now()}`,
-      couple_id: coupleId,
-      author_id: userId,
-      mood,
-      op_id: null,
-      created_at: new Date().toISOString(),
-    };
-    queryClient.setQueryData<MoodRow[]>([...KEY, coupleId], (old) => [optimistic, ...(old ?? [])]);
+      // 1. optimistic: my chip lands on my screen NOW
+      const optimistic: MoodRow = {
+        id: `optimistic-${Date.now()}`,
+        couple_id: coupleId,
+        author_id: userId,
+        mood,
+        op_id: null,
+        created_at: new Date().toISOString(),
+      };
+      queryClient.setQueryData<MoodRow[]>([...KEY, coupleId], (old) => [optimistic, ...(old ?? [])]);
 
-    // 2. durable: queued in sqlite, survives airplane mode + app death
-    await enqueue({
-      coupleId,
-      kind: 'upsert',
-      table: 'moods',
-      payload: { couple_id: coupleId, author_id: userId, mood },
-    });
+      // 2. durable: queued in sqlite, survives airplane mode + app death
+      await enqueue({
+        coupleId,
+        kind: 'upsert',
+        table: 'moods',
+        payload: { couple_id: coupleId, author_id: userId, mood },
+      });
 
-    // 3. fast path: her phone buzzes this second
-    emit({ t: 'mood:ping', mood, by: userId });
-  };
+      // 3. fast path: her phone buzzes this second
+      emit({ t: 'mood:ping', mood, by: userId });
+    },
+    [coupleId, userId, queryClient],
+  );
 }

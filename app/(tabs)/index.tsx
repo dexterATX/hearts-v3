@@ -1,7 +1,7 @@
 // app/(tabs)/index.tsx — home: one overview panel (mood + days + presence) and
 // the mood deck above the grouped story; FeedList is the one scroller, a mini
 // status pill fades in on scroll so the dashboard never fully leaves.
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -38,6 +38,9 @@ import type { StoryLine } from '../../features/home';
 // Scroll distance over which the hero counter fades/shrinks into the pill.
 const HERO_RANGE = 160;
 
+// stable empty reference — a fresh [] per render re-renders the feed for nothing
+const EMPTY_STORY: StoryLine[] = [];
+
 export default function HomeTab() {
   usePublishPresence('index');
   useHomeSync();
@@ -64,10 +67,13 @@ export default function HomeTab() {
   const daysText = days === null ? null : days === 0 ? 'day one. today. ♥' : `${days} days of us`;
   const presenceText = partnerHere ? describePresence(partnerHere) : null;
 
-  const onPressRow = (line: StoryLine) => {
+  const onPressRow = useCallback((line: StoryLine) => {
     if (line.kind === 'letter') router.push(`/letters/${line.id}`);
     else router.push('/(tabs)/us'); // voice + photo both live on the us tab
-  };
+  }, []);
+
+  const onSendMood = useCallback((k: Parameters<typeof sendMood>[0]) => void sendMood(k), [sendMood]);
+  const onRefreshFeed = useCallback(() => void feed.refetch(), [feed.refetch]);
 
   // Mini status pill: the counter's understudy, fading in as you scroll past the panel.
   const miniStyle = useAnimatedStyle(() =>
@@ -93,9 +99,11 @@ export default function HomeTab() {
         },
   );
 
-  const headerElement = useMemo(
+  // Two memos, deliberately split: the panel rebuilds when mood data lands,
+  // but the deck must NOT re-render mid-flight because of it (P0 jank).
+  const panelElement = useMemo(
     () => (
-      <View style={{ gap: spacing.lg, paddingTop: spacing.md, paddingBottom: spacing.xl }}>
+      <View style={{ gap: spacing.lg, paddingTop: spacing.md, paddingBottom: spacing.lg }}>
         <OutboxBanner />
         <View style={{ paddingHorizontal: spacing.lg }}>
           <MoodCard
@@ -107,29 +115,34 @@ export default function HomeTab() {
             presenceText={presenceText}
           />
         </View>
-        <Reveal delay={300} dy={16} soft>
-          <MoodDeck onSend={(k) => void sendMood(k)} partnerName={partnerName} />
-        </Reveal>
       </View>
     ),
-    [
-      moods.data,
-      moods.isPending,
-      partnerId,
-      partnerName,
-      daysText,
-      presenceText,
-      myId,
-      feed.error,
-      feed.isPending,
-      sendMood,
-    ],
+    [moods.data, moods.isPending, partnerId, partnerName, daysText, presenceText],
+  );
+
+  const deckElement = useMemo(
+    () => (
+      <Reveal delay={300} dy={16} soft>
+        <MoodDeck onSend={onSendMood} partnerName={partnerName} />
+      </Reveal>
+    ),
+    [onSendMood, partnerName],
+  );
+
+  const headerElement = useMemo(
+    () => (
+      <View style={{ gap: spacing.lg, paddingBottom: spacing.xl }}>
+        {panelElement}
+        {deckElement}
+      </View>
+    ),
+    [panelElement, deckElement],
   );
 
   return (
     <SafeAreaView style={{ flex: 1 }} edges={['top']}>
       <FeedList
-        days={feed.story ?? []}
+        days={feed.story ?? EMPTY_STORY}
         loading={feed.isLoading}
         error={feed.error ? 'the feed would not load' : null}
         partnerName={partnerName}
@@ -137,7 +150,7 @@ export default function HomeTab() {
         header={headerElement}
         scrollY={scrollY}
         refreshing={feed.isRefetching}
-        onRefresh={() => void feed.refetch()}
+        onRefresh={onRefreshFeed}
         onPressRow={onPressRow}
       />
       <Animated.View

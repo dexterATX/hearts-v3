@@ -96,9 +96,10 @@ export function MoodCard({
     // eslint-disable-next-line react-hooks/exhaustive-deps — shared values are stable
   }, [latest?.id, reduced]);
 
-  // the glow breathes and the bunny drifts, until the next mood arrives
+  // the glow breathes and the bunny drifts — but only when there's a live mood
+  // on screen to animate (loading/empty states don't pay for idle loops)
   useEffect(() => {
-    if (!reduced) {
+    if (!reduced && latest && !loading) {
       breathe.value = withRepeat(withTiming(0.85, { duration: 2400 }), -1, true);
       bob.value = withRepeat(withSequence(withTiming(1, BOB), withTiming(0, BOB)), -1, false);
     }
@@ -107,7 +108,7 @@ export function MoodCard({
       cancelAnimation(bob);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps — shared values are stable
-  }, [reduced]);
+  }, [reduced, latest, loading]);
 
   const glowStyle = useAnimatedStyle(() => ({ opacity: glow.value * breathe.value }));
   const popStyle = useAnimatedStyle(() => ({
@@ -122,7 +123,7 @@ export function MoodCard({
   if (loading) {
     return (
       <Reveal delay={160} dy={14} scale>
-        <Card variant="accent" style={PANEL}>
+        <Card variant="accent" shine={false} style={PANEL}>
           <View style={{ width: 132, alignItems: 'center', justifyContent: 'center', paddingVertical: spacing.xl }}>
             <Skeleton width={64} height={64} style={{ borderRadius: radius.pill }} />
           </View>
@@ -156,7 +157,7 @@ export function MoodCard({
   const meta = moodMeta(latest.mood);
   return (
     <Reveal delay={160} dy={14} scale>
-      <Card variant="accent" style={PANEL}>
+      <Card variant="accent" shine={false} style={PANEL}>
         {/* the left panel: the bunny, lit, on its own stage */}
         <View
           style={{

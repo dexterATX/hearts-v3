@@ -51,10 +51,11 @@ function splitStyle(style: ViewProps['style']): { box: ViewStyle; content: ViewS
 
 export function Card({
   variant = 'default',
+  shine,
   style,
   children,
   ...rest
-}: ViewProps & { variant?: Variant }) {
+}: ViewProps & { variant?: Variant; shine?: boolean }) {
   const v = VARIANTS[variant];
   const { box, content } = splitStyle(style);
 
@@ -63,7 +64,7 @@ export function Card({
       cornerRadius={radius.md}
       stops={v.metal}
       fill={v.bg}
-      shine={v.shine}
+      shine={shine ?? v.shine}
       style={{ ...(v.shadow ? elevation.card : null), ...box }}
     >
       <View style={[{ padding: spacing.lg }, content]} {...rest}>

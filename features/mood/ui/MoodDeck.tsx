@@ -49,22 +49,26 @@ const SLOT_TILT = 2.2; // degrees per slot, side stable per card
 const SLOT_SCALE = 0.045;
 const SLOT_DIM = 0.08;
 const VISIBLE = 4;
-// open-fan geometry per slot from center (k = index − 3, so ±3 at the edges):
-// tuned so all 7 cards stay on a 360dp screen — the outermost card EDGE sits
-// at 3·27 + cardW·0.58/2 ≈ 146px from center (limit: 360/2 − 8 = 172), and
-// even its rotated top corner reaches only ≈170px, 10px inside the screen
 // the open state: a tabletop scatter — 7 fixed spots around the deck center,
 // jittered rotations, messy like cards tossed on a table. Positions are dp
-// offsets from the deck's center; big enough that every face stays readable.
+// offsets from the deck's center (container top + cardH/2), kept in a tight
+// cloud biased below center so the fan never reaches the mood panel above or
+// the caption below: y ∈ [−70, +140] keeps the topmost edge ≥ the container's
+// top edge (the panel is 64dp above it) and the lowest edge at the caption,
+// which paints above the deck; |x| ≤ 120 keeps rotated corners inside a 360dp
+// screen (widest reach ≈ 179 < 180). Every pair keeps each center clear of
+// the neighbor's card (dx ≥ 80 or dy ≥ 92); the three near-stacked pairs
+// (0-2, 1-4, 2-6) lean on paint order — lower index on top — so only a ~9dp
+// strip of the underneath card's bunny-top tucks under, like a real pile.
 const FAN_SCALE = 0.55;
 const SCATTER: readonly { x: number; y: number; r: number }[] = [
-  { x: -112, y: -165, r: -7 },
-  { x: 108, y: -150, r: 6 },
-  { x: -35, y: -45, r: -3 },
-  { x: 118, y: -15, r: 8 },
-  { x: -125, y: 95, r: 5 },
-  { x: 25, y: 85, r: -6 },
-  { x: 130, y: 130, r: -8 },
+  { x: 8, y: -68, r: -6 },
+  { x: -112, y: -33, r: 4 },
+  { x: -7, y: 30, r: 8 },
+  { x: 108, y: -44, r: -5 },
+  { x: -114, y: 74, r: 3 },
+  { x: 110, y: 104, r: -4 },
+  { x: -11, y: 127, r: 5 },
 ];
 // local spring characters (theme tokens stay untouched)
 const RESTACK_SPRING = { damping: 16, stiffness: 210, mass: 0.9 }; // quick, small overshoot
@@ -242,6 +246,11 @@ function DeckCard({
   const style = useAnimatedStyle(() => {
     const p = pos.value;
     const s = spread.value;
+    // pseudo-stagger: each card flies on its own progress — card 0 leads, the
+    // back of the deck trails — so the scatter cascades out instead of moving
+    // as one slab. Derived from spread per frame (no new shared values); at
+    // rest (spread 0 or 1) si === s, so this only shapes the flight itself.
+    const si = Math.max(0, Math.min(1, s * 1.7 - index * 0.1));
     // collapsed: the slot in the deck
     const slotY = p * SLOT_Y;
     const slotX = fanSide * p * SLOT_X;
@@ -255,10 +264,10 @@ function DeckCard({
     const fanR = sc.r;
     const fanS = FAN_SCALE;
     const baseTransform = [
-      { translateY: slotY * (1 - s) + fanY * s },
-      { translateX: slotX * (1 - s) + fanX * s },
-      { rotate: `${slotR * (1 - s) + fanR * s}deg` },
-      { scale: slotS * (1 - s) + fanS * s },
+      { translateY: slotY * (1 - si) + fanY * si },
+      { translateX: slotX * (1 - si) + fanX * si },
+      { rotate: `${slotR * (1 - si) + fanR * si}deg` },
+      { scale: slotS * (1 - si) + fanS * si },
     ];
     const baseOpacity = interpolate(p, [VISIBLE - 1, VISIBLE], [1, 0], Extrapolation.CLAMP);
     const opacity = baseOpacity * (1 - s) + s; // the fan reveals every card
@@ -490,7 +499,8 @@ export function MoodDeck({
 
   return (
     <View style={{ alignItems: 'center' }}>
-      {/* headroom: the open fan rises ~44dp above the deck's top edge */}
+      {/* headroom: the open scatter's top cards reach ≤ ~12dp above the deck's
+          top edge — this margin keeps them clear of the mood panel above */}
       <View style={{ width: '100%', height: stackH, alignItems: 'center', marginTop: spacing.huge }}>
         {/* tap-away backdrop while the fan is open */}
         {spreadOpen ? (
