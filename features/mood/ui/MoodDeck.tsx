@@ -10,7 +10,7 @@
 // 700ms cooldown); a cancelled drag always springs home (onFinalize). Tap
 // throws too; reduced motion taps send instantly with every animation off.
 import { useEffect, useRef, useState } from 'react';
-import { StyleSheet, useWindowDimensions, View } from 'react-native';
+import { Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { scheduleOnRN } from 'react-native-worklets';
@@ -67,7 +67,31 @@ type DeckCardProps = {
   onRestack: (k: MoodKey) => void;
 };
 
-function DeckCard({ mood, index, top, cardW, cardH, onThrow, onRestack }: DeckCardProps) {
+function DeckCard({
+  mood,
+  index,
+  top,
+  spread,
+  spreadOpen,
+  onOpenSpread,
+  cardW,
+  cardH,
+  onThrow,
+  onRestack,
+}: {
+  mood: (typeof MOODS)[number];
+  index: number;
+  top: boolean;
+  /** 0 collapsed deck → 1 fanned hand, animated */
+  spread: ReturnType<typeof useSharedValue<number>>;
+  /** React mirror of spread for gesture enabling */
+  spreadOpen: boolean;
+  onOpenSpread: () => void;
+  cardW: number;
+  cardH: number;
+  onThrow: (k: MoodKey) => void;
+  onRestack: (k: MoodKey) => void;
+}) {
   const reduced = useReducedMotion();
   const pos = useSharedValue(index + 4); // +4 on mount: the deck deals upward
   const x = useSharedValue(0);
@@ -133,7 +157,7 @@ function DeckCard({ mood, index, top, cardW, cardH, onThrow, onRestack }: DeckCa
   };
 
   const pan = Gesture.Pan()
-    .enabled(top && !reduced)
+    .enabled(top && !reduced && !spreadOpen)
     .activeOffsetX([-12, 12]) // sideways only — vertical drags scroll the page
     .failOffsetY([-24, 24])
     .onStart(() => {
@@ -178,29 +202,45 @@ function DeckCard({ mood, index, top, cardW, cardH, onThrow, onRestack }: DeckCa
       }
     });
 
-  const tap = Gesture.Tap().enabled(top).onEnd(() => {
-    if (flying.value === 1) return; // mid-flight: inert
-    if (reduced) {
-      scheduleOnRN(onThrow, mood.key);
-      scheduleOnRN(onRestack, mood.key);
-    } else {
-      flingOut(560, 1400, 0);
-    }
-  });
+  // tap: collapsed → the deck opens into a fan; fanned → this card is the pick
+  const tap = Gesture.Tap()
+    .enabled(top || spreadOpen)
+    .onEnd(() => {
+      if (flying.value === 1) return; // mid-flight: inert
+      if (!spreadOpen) {
+        scheduleOnRN(onOpenSpread);
+      } else {
+        scheduleOnRN(onThrow, mood.key);
+        scheduleOnRN(onRestack, mood.key);
+      }
+    });
 
   // tilt direction is card identity, not slot — the fan never churns on restack
   const fanSide = (mood.key.charCodeAt(0) + mood.key.length) % 2 === 0 ? -1 : 1;
 
   const style = useAnimatedStyle(() => {
     const p = pos.value;
+    const s = spread.value;
+    // collapsed: the slot in the deck
+    const slotY = p * SLOT_Y;
+    const slotX = fanSide * p * SLOT_X;
+    const slotR = fanSide * p * SLOT_TILT;
+    const slotS = Math.max(0.85, 1 - p * SLOT_SCALE);
+    // fanned: every card visible in a spread hand, fanned by rotation
+    const a = (index - 3) * 13; // degrees across the fan
+    const fanY = -Math.abs(a) - 14;
+    const fanX = a * 3.2;
+    const fanR = a;
+    const fanS = 0.58;
     const baseTransform = [
-      { translateY: p * SLOT_Y },
-      { translateX: fanSide * p * SLOT_X },
-      { rotate: `${fanSide * p * SLOT_TILT}deg` },
-      { scale: Math.max(0.85, 1 - p * SLOT_SCALE) },
+      { translateY: slotY * (1 - s) + fanY * s },
+      { translateX: slotX * (1 - s) + fanX * s },
+      { rotate: `${slotR * (1 - s) + fanR * s}deg` },
+      { scale: slotS * (1 - s) + fanS * s },
     ];
     const baseOpacity = interpolate(p, [VISIBLE - 1, VISIBLE], [1, 0], Extrapolation.CLAMP);
-    if (!top) return { transform: baseTransform, opacity: baseOpacity };
+    const opacity = baseOpacity * (1 - s) + s; // the fan reveals every card
+    if (!top) return { transform: baseTransform, opacity };
     return {
       transform: [
         { perspective: 800 },
@@ -216,12 +256,12 @@ function DeckCard({ mood, index, top, cardW, cardH, onThrow, onRestack }: DeckCa
       opacity:
         flying.value === 1
           ? interpolate(y.value, [-620, -470, 0], [0, 1, 1], Extrapolation.CLAMP)
-          : baseOpacity,
+          : opacity,
     };
   });
 
   const dimStyle = useAnimatedStyle(() => ({
-    opacity: Math.min(0.25, pos.value * SLOT_DIM),
+    opacity: Math.min(0.25, pos.value * SLOT_DIM) * (1 - spread.value), // the fan lifts every face
   }));
 
   const FACE_W = cardW - 7; // MetallicFrame thickness 3.5 × 2 — the fill-mask rule
@@ -310,9 +350,9 @@ function DeckCard({ mood, index, top, cardW, cardH, onThrow, onRestack }: DeckCa
     </MetallicFrame>
   );
 
-  // undercards are pure visuals — no gesture machinery attached at all
+  // undercards are pure visuals — until the fan opens, then they're pickable
   if (!top) {
-    return (
+    const card = (
       <Animated.View style={[StyleSheet.absoluteFill, cardBox, style]}>
         {frame}
         <Animated.View
@@ -321,6 +361,8 @@ function DeckCard({ mood, index, top, cardW, cardH, onThrow, onRestack }: DeckCa
         />
       </Animated.View>
     );
+    if (!spreadOpen) return card;
+    return <GestureDetector gesture={tap}>{card}</GestureDetector>;
   }
 
   return (
@@ -365,11 +407,27 @@ export function MoodDeck({
   const lastSendAt = useRef(0);
   const [contactId] = useState(() => `dkc${uid++}`);
 
+  // the fan: tap the deck → every card spreads into a pickable hand
+  const spread = useSharedValue(0);
+  const [spreadOpen, setSpreadOpen] = useState(false);
+  const openSpread = () => {
+    if (spreadOpen) return;
+    void Haptics.selectionAsync();
+    setSpreadOpen(true);
+    spread.value = reduced ? 1 : withSpring(1, motion.springSoft);
+  };
+  const closeSpread = () => {
+    if (!spreadOpen) return;
+    setSpreadOpen(false);
+    spread.value = reduced ? 0 : withSpring(0, motion.springSoft);
+  };
+
   const throwMood = (key: MoodKey) => {
     const now = Date.now();
     if (now - lastSendAt.current < SEND_COOLDOWN_MS) return; // one mood per flight
     lastSendAt.current = now;
     onSend(key);
+    closeSpread();
     setNote(partnerName ? `on its way to ${partnerName}` : 'on its way');
     if (!reduced) {
       burst.value = 0;
@@ -401,7 +459,16 @@ export function MoodDeck({
 
   return (
     <View style={{ alignItems: 'center' }}>
-      <View style={{ width: cardW + 56, height: stackH, alignItems: 'center' }}>
+      <View style={{ width: '100%', height: stackH, alignItems: 'center' }}>
+        {/* tap-away backdrop while the fan is open */}
+        {spreadOpen ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="close the fan"
+            onPress={closeSpread}
+            style={[StyleSheet.absoluteFill, { top: -600, bottom: -600 }]}
+          />
+        ) : null}
         {/* contact shadow: the stack sits ON the page, not floating over it */}
         <Svg
           pointerEvents="none"
@@ -446,6 +513,9 @@ export function MoodDeck({
                 mood={mood}
                 index={i}
                 top={i === 0}
+                spread={spread}
+                spreadOpen={spreadOpen}
+                onOpenSpread={openSpread}
                 cardW={cardW}
                 cardH={cardH}
                 onThrow={throwMood}
@@ -460,9 +530,11 @@ export function MoodDeck({
         <Animated.View style={noteStyle}>
           <Text variant="caption" color={note ? colors.blue : colors.faint}>
             {note ??
-              (reduced
-                ? 'how are you feeling? tap a card to send it'
-                : 'how are you feeling? flick a card — or just tap it')}
+              (spreadOpen
+                ? 'pick the one that fits — tap anywhere else to close'
+                : reduced
+                  ? 'how are you feeling? tap the deck to see them all'
+                  : 'how are you feeling? flick a card — or tap the deck to see them all')}
           </Text>
         </Animated.View>
       </View>
