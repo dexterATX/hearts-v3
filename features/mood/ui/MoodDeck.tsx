@@ -49,6 +49,15 @@ const SLOT_TILT = 2.2; // degrees per slot, side stable per card
 const SLOT_SCALE = 0.045;
 const SLOT_DIM = 0.08;
 const VISIBLE = 4;
+// open-fan geometry per slot from center (k = index − 3, so ±3 at the edges):
+// tuned so all 7 cards stay on a 360dp screen — the outermost card EDGE sits
+// at 3·27 + cardW·0.58/2 ≈ 146px from center (limit: 360/2 − 8 = 172), and
+// even its rotated top corner reaches only ≈170px, 10px inside the screen
+const FAN_X = 27; // px per slot from center
+const FAN_Y = 10; // outer cards rise into an arc
+const FAN_R = 7; // degrees of tilt per slot
+const FAN_LIFT = 14; // the whole open fan floats up off the deck
+const FAN_SCALE = 0.58;
 // local spring characters (theme tokens stay untouched)
 const RESTACK_SPRING = { damping: 16, stiffness: 210, mass: 0.9 }; // quick, small overshoot
 const POP_SPRING = { damping: 14, stiffness: 260, mass: 0.8 }; // the rise-to-top bounce
@@ -76,6 +85,7 @@ function DeckCard({
   onOpenSpread,
   cardW,
   cardH,
+  centerLeft,
   onThrow,
   onRestack,
 }: {
@@ -89,6 +99,9 @@ function DeckCard({
   onOpenSpread: () => void;
   cardW: number;
   cardH: number;
+  /** left inset that centers the card on screen — alignSelf is a no-op on
+      absolute children, so the deck computes this from the window width */
+  centerLeft: number;
   onThrow: (k: MoodKey) => void;
   onRestack: (k: MoodKey) => void;
 }) {
@@ -226,12 +239,13 @@ function DeckCard({
     const slotX = fanSide * p * SLOT_X;
     const slotR = fanSide * p * SLOT_TILT;
     const slotS = Math.max(0.85, 1 - p * SLOT_SCALE);
-    // fanned: every card visible in a spread hand, fanned by rotation
-    const a = (index - 3) * 13; // degrees across the fan
-    const fanY = -Math.abs(a) - 14;
-    const fanX = a * 3.2;
-    const fanR = a;
-    const fanS = 0.58;
+    // fanned: every card visible in a spread hand, fanned by rotation around
+    // the screen center (the card's left inset already pins it there)
+    const k = index - 3; // slots from center: -3…3
+    const fanX = k * FAN_X;
+    const fanY = -Math.abs(k) * FAN_Y - FAN_LIFT;
+    const fanR = k * FAN_R;
+    const fanS = FAN_SCALE;
     const baseTransform = [
       { translateY: slotY * (1 - s) + fanY * s },
       { translateX: slotX * (1 - s) + fanX * s },
@@ -332,10 +346,15 @@ function DeckCard({
     </View>
   );
 
+  // deterministic center: absoluteFill + alignSelf hugged the container's
+  // left edge (Yoga ignores alignSelf when left/right insets are set), so the
+  // whole fan spread from the wrong origin
   const cardBox = {
+    position: 'absolute' as const,
+    top: 0,
+    left: centerLeft,
     width: cardW,
     height: cardH,
-    alignSelf: 'center' as const,
   };
 
   const frame = (
@@ -353,7 +372,7 @@ function DeckCard({
   // undercards are pure visuals — until the fan opens, then they're pickable
   if (!top) {
     const card = (
-      <Animated.View style={[StyleSheet.absoluteFill, cardBox, style]}>
+      <Animated.View style={[cardBox, style]}>
         {frame}
         <Animated.View
           pointerEvents="none"
@@ -373,7 +392,6 @@ function DeckCard({
         accessibilityLabel={`send mood ${mood.label}`}
         accessibilityHint="double tap to send this mood — the deck cycles after each send"
         style={[
-          StyleSheet.absoluteFill,
           cardBox,
           // a real shadow needs an opaque surface to cast from on Android
           { backgroundColor: colors.raised, borderRadius: radius.lg },
@@ -399,6 +417,10 @@ export function MoodDeck({
   const cardW = Math.max(208, Math.min(248, Math.round(width * 0.62)));
   const cardH = Math.round(cardW * 1.24);
   const stackH = cardH + (VISIBLE - 1) * SLOT_Y + 8;
+  // the deck container spans the full screen width, so every card (and the
+  // shadow/ripple below) centers at this left inset — deterministic, unlike
+  // alignSelf on an absolutely-positioned child
+  const centerLeft = Math.round((width - cardW) / 2);
 
   const [order, setOrder] = useState<MoodKey[]>(MOODS.map((m) => m.key));
   const [note, setNote] = useState<string | null>(null);
@@ -459,7 +481,8 @@ export function MoodDeck({
 
   return (
     <View style={{ alignItems: 'center' }}>
-      <View style={{ width: '100%', height: stackH, alignItems: 'center' }}>
+      {/* headroom: the open fan rises ~44dp above the deck's top edge */}
+      <View style={{ width: '100%', height: stackH, alignItems: 'center', marginTop: spacing.huge }}>
         {/* tap-away backdrop while the fan is open */}
         {spreadOpen ? (
           <Pressable
@@ -469,12 +492,13 @@ export function MoodDeck({
             style={[StyleSheet.absoluteFill, { top: -600, bottom: -600 }]}
           />
         ) : null}
-        {/* contact shadow: the stack sits ON the page, not floating over it */}
+        {/* contact shadow: the stack sits ON the page, not floating over it;
+            centered on the same math as the cards, not on alignItems */}
         <Svg
           pointerEvents="none"
           width={cardW * 1.15}
           height={26}
-          style={{ position: 'absolute', bottom: -spacing.xs }}
+          style={{ position: 'absolute', left: (width - cardW * 1.15) / 2, bottom: -spacing.xs }}
         >
           <Defs>
             <RadialGradient id={contactId} cx="0.5" cy="0.5" r="0.5">
@@ -492,6 +516,7 @@ export function MoodDeck({
             {
               position: 'absolute',
               top: cardH / 2 - cardW / 2,
+              left: centerLeft,
               width: cardW,
               height: cardW,
               borderRadius: radius.pill,
@@ -518,6 +543,7 @@ export function MoodDeck({
                 onOpenSpread={openSpread}
                 cardW={cardW}
                 cardH={cardH}
+                centerLeft={centerLeft}
                 onThrow={throwMood}
                 onRestack={restack}
               />
