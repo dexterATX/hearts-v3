@@ -104,7 +104,6 @@ export default function HomeTab() {
   const panelElement = useMemo(
     () => (
       <View style={{ gap: spacing.lg, paddingTop: spacing.md, paddingBottom: spacing.lg }}>
-        <OutboxBanner />
         <View style={{ paddingHorizontal: spacing.lg }}>
           <MoodCard
             rows={moods.data ?? []}
@@ -134,6 +133,14 @@ export default function HomeTab() {
       <View style={{ gap: spacing.lg, paddingBottom: spacing.xl }}>
         {panelElement}
         {deckElement}
+        {/* floats over the top instead of shoving the page down and back up
+            every time an op queues and clears */}
+        <View
+          pointerEvents="box-none"
+          style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10 }}
+        >
+          <OutboxBanner />
+        </View>
       </View>
     ),
     [panelElement, deckElement],
