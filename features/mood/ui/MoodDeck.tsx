@@ -67,8 +67,8 @@ const SCATTER: readonly { x: number; y: number; r: number }[] = [
   { x: -7, y: 30, r: 8 },
   { x: 108, y: -44, r: -5 },
   { x: -114, y: 74, r: 3 },
-  { x: 110, y: 104, r: -4 },
-  { x: -11, y: 127, r: 5 },
+  { x: 110, y: 86, r: -4 },
+  { x: -11, y: 98, r: 5 },
 ];
 // local spring characters (theme tokens stay untouched)
 const RESTACK_SPRING = { damping: 16, stiffness: 210, mass: 0.9 }; // quick, small overshoot
@@ -571,7 +571,7 @@ export function MoodDeck({
           .reverse()}
       </View>
       {/* fixed-height caption: text swaps never shift the layout */}
-      <View style={{ height: 17, marginTop: spacing.sm, alignItems: 'center' }}>
+      <View style={{ height: 17, marginTop: spacing.lg, alignItems: 'center' }}>
         <Animated.View style={noteStyle}>
           <Text variant="caption" color={note ? colors.blue : colors.faint}>
             {note ??
