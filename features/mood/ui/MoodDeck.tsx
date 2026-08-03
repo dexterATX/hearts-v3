@@ -459,7 +459,10 @@ export function MoodDeck({
       <View style={{ height: 17, marginTop: spacing.sm, alignItems: 'center' }}>
         <Animated.View style={noteStyle}>
           <Text variant="caption" color={note ? colors.blue : colors.faint}>
-            {note ?? (reduced ? 'tap to send' : 'flick or tap to send')}
+            {note ??
+              (reduced
+                ? 'how are you feeling? tap a card to send it'
+                : 'how are you feeling? flick a card — or just tap it')}
           </Text>
         </Animated.View>
       </View>
