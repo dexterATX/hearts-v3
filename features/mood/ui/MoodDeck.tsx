@@ -53,11 +53,19 @@ const VISIBLE = 4;
 // tuned so all 7 cards stay on a 360dp screen — the outermost card EDGE sits
 // at 3·27 + cardW·0.58/2 ≈ 146px from center (limit: 360/2 − 8 = 172), and
 // even its rotated top corner reaches only ≈170px, 10px inside the screen
-const FAN_X = 27; // px per slot from center
-const FAN_Y = 10; // outer cards rise into an arc
-const FAN_R = 7; // degrees of tilt per slot
-const FAN_LIFT = 14; // the whole open fan floats up off the deck
-const FAN_SCALE = 0.58;
+// the open state: a tabletop scatter — 7 fixed spots around the deck center,
+// jittered rotations, messy like cards tossed on a table. Positions are dp
+// offsets from the deck's center; big enough that every face stays readable.
+const FAN_SCALE = 0.55;
+const SCATTER: readonly { x: number; y: number; r: number }[] = [
+  { x: -112, y: -165, r: -7 },
+  { x: 108, y: -150, r: 6 },
+  { x: -35, y: -45, r: -3 },
+  { x: 118, y: -15, r: 8 },
+  { x: -125, y: 95, r: 5 },
+  { x: 25, y: 85, r: -6 },
+  { x: 130, y: 130, r: -8 },
+];
 // local spring characters (theme tokens stay untouched)
 const RESTACK_SPRING = { damping: 16, stiffness: 210, mass: 0.9 }; // quick, small overshoot
 const POP_SPRING = { damping: 14, stiffness: 260, mass: 0.8 }; // the rise-to-top bounce
@@ -239,12 +247,12 @@ function DeckCard({
     const slotX = fanSide * p * SLOT_X;
     const slotR = fanSide * p * SLOT_TILT;
     const slotS = Math.max(0.85, 1 - p * SLOT_SCALE);
-    // fanned: every card visible in a spread hand, fanned by rotation around
-    // the screen center (the card's left inset already pins it there)
-    const k = index - 3; // slots from center: -3…3
-    const fanX = k * FAN_X;
-    const fanY = -Math.abs(k) * FAN_Y - FAN_LIFT;
-    const fanR = k * FAN_R;
+    // fanned: a tabletop scatter — every card thrown loose across the screen,
+    // jittered like a messy shuffle, big enough to read the mood on its face
+    const sc = SCATTER[index] as { x: number; y: number; r: number };
+    const fanX = sc.x;
+    const fanY = sc.y;
+    const fanR = sc.r;
     const fanS = FAN_SCALE;
     const baseTransform = [
       { translateY: slotY * (1 - s) + fanY * s },
@@ -332,12 +340,13 @@ function DeckCard({
     </View>
   ) : (
     <View style={{ width: FACE_W, height: FACE_H, alignItems: 'center', justifyContent: 'center' }}>
-      {/* undercards are silhouettes; only the next-up card whispers its name */}
-      <MoodBunny mood={mood.key} size={cardW * 0.5} style={{ opacity: 0.45 }} />
-      {index === 1 ? (
+      {/* collapsed: silhouettes, only the next-up whispers its name.
+          scattered: every face is the pick — full bunny, full label */}
+      <MoodBunny mood={mood.key} size={cardW * 0.5} style={{ opacity: spreadOpen ? 1 : 0.45 }} />
+      {index === 1 || spreadOpen ? (
         <Text
-          variant="caption"
-          color={colors.faint}
+          variant={spreadOpen ? 'title' : 'caption'}
+          color={spreadOpen ? colors.ink : colors.faint}
           style={{ position: 'absolute', bottom: spacing.lg }}
         >
           {mood.label}
