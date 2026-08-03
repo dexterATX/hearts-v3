@@ -68,7 +68,7 @@ const SCATTER: readonly { x: number; y: number; r: number }[] = [
   { x: 110, y: 86, r: -5 }, // playful: slid down the right column
   { x: -114, y: 74, r: 3 },
   { x: 108, y: -44, r: -4 },
-  { x: -11, y: 98, r: 5 },
+  { x: -11, y: 112, r: 5 }, // bottom middle: pulled down a touch
 ];
 // local spring characters (theme tokens stay untouched)
 const RESTACK_SPRING = { damping: 16, stiffness: 210, mass: 0.9 }; // quick, small overshoot
