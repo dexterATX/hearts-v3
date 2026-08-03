@@ -501,7 +501,7 @@ export function MoodDeck({
     <View style={{ alignItems: 'center' }}>
       {/* headroom: the open scatter's top cards reach ≤ ~12dp above the deck's
           top edge — this margin keeps them clear of the mood panel above */}
-      <View style={{ width: '100%', height: stackH, alignItems: 'center', marginTop: spacing.huge }}>
+      <View style={{ width: '100%', height: stackH, alignItems: 'center', marginTop: spacing.lg }}>
         {/* tap-away backdrop while the fan is open */}
         {spreadOpen ? (
           <Pressable
