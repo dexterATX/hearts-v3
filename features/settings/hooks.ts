@@ -237,7 +237,7 @@ export function useExport() {
       const SAF = await import('expo-file-system/legacy').then((m) => m.StorageAccessFramework);
       const perm = await SAF.requestDirectoryPermissionsAsync();
       if (!perm.granted) {
-        setError('you chose not to pick a folder — nothing was written');
+        setError('you chose not to pick a folder. nothing was written');
         return false;
       }
       const name = exportFileName();

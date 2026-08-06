@@ -103,7 +103,7 @@ export default function HomeTab() {
   // but the deck must NOT re-render mid-flight because of it (P0 jank).
   const panelElement = useMemo(
     () => (
-      <View style={{ gap: spacing.lg, paddingTop: spacing.md, paddingBottom: spacing.lg }}>
+      <View style={{ paddingTop: spacing.md }}>
         <View style={{ paddingHorizontal: spacing.lg }}>
           <MoodCard
             rows={moods.data ?? []}
@@ -130,7 +130,7 @@ export default function HomeTab() {
 
   const headerElement = useMemo(
     () => (
-      <View style={{ gap: spacing.lg, paddingBottom: spacing.xl }}>
+      <View style={{ gap: spacing.xl, paddingBottom: spacing.xl }}>
         {panelElement}
         {deckElement}
         {/* floats over the top instead of shoving the page down and back up
@@ -159,6 +159,7 @@ export default function HomeTab() {
         refreshing={feed.isRefetching}
         onRefresh={onRefreshFeed}
         onPressRow={onPressRow}
+        thumbs={feed.thumbs}
       />
       <Animated.View
         pointerEvents="none"

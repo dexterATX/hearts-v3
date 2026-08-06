@@ -67,7 +67,11 @@ const SCATTER: readonly { x: number; y: number; r: number }[] = [
   { x: -7, y: 30, r: 8 },
   { x: 110, y: 86, r: -5 }, // playful: slid down the right column
   { x: -114, y: 74, r: 3 },
-  { x: 108, y: -44, r: -4 },
+  // top-right: raised clear of BOTH neighbours — the deck's top card only
+  // tucks its left edge, and the right-column card below (which paints over
+  // anything it overlaps) no longer covers its mood label. y=-85 puts its
+  // bottom edge exactly at the lower card's top.
+  { x: 112, y: -85, r: -4 },
   { x: -11, y: 136, r: 5 }, // bottom middle: pulled well down
 ];
 // local spring characters (theme tokens stay untouched)
@@ -408,7 +412,7 @@ function DeckCard({
         accessible
         accessibilityRole="button"
         accessibilityLabel={`send mood ${mood.label}`}
-        accessibilityHint="double tap to send this mood — the deck cycles after each send"
+        accessibilityHint="double tap to send this mood, the deck cycles after each send"
         style={[
           cardBox,
           // a real shadow needs an opaque surface to cast from on Android
@@ -468,7 +472,7 @@ export function MoodDeck({
     lastSendAt.current = now;
     onSend(key);
     closeSpread();
-    setNote(partnerName ? `on its way to ${partnerName}` : 'on its way');
+    setNote(partnerName ? `sent to ${partnerName}` : 'sent');
     if (!reduced) {
       burst.value = 0;
       burst.value = withTiming(1, { duration: 520, easing: Easing.out(Easing.quad) });
@@ -498,10 +502,11 @@ export function MoodDeck({
   const noteStyle = useAnimatedStyle(() => ({ opacity: noteO.value }));
 
   return (
-    <View style={{ alignItems: 'center' }}>
-      {/* headroom: the open scatter's top cards reach ≤ ~12dp above the deck's
-          top edge — this margin keeps them clear of the mood panel above */}
-      <View style={{ width: '100%', height: stackH, alignItems: 'center', marginTop: spacing.lg }}>
+    // the open fan floats a layer UP: story cards are later siblings in the
+    // list and would otherwise paint over the scatter's bottom cards. zIndex
+    // for iOS, elevation for Android's compositor.
+    <View style={[{ alignItems: 'center' }, spreadOpen ? { zIndex: 30, elevation: 30 } : null]}>
+      <View style={{ width: '100%', height: stackH, alignItems: 'center' }}>
         {/* tap-away backdrop while the fan is open */}
         {spreadOpen ? (
           <Pressable
@@ -571,15 +576,15 @@ export function MoodDeck({
           .reverse()}
       </View>
       {/* fixed-height caption: text swaps never shift the layout */}
-      <View style={{ height: 17, marginTop: spacing.huge, alignItems: 'center' }}>
+      <View style={{ height: 17, marginTop: spacing.xxl, alignItems: 'center' }}>
         <Animated.View style={noteStyle}>
           <Text variant="caption" color={note ? colors.blue : colors.faint}>
             {note ??
               (spreadOpen
-                ? 'pick the one that fits — tap anywhere else to close'
+                ? 'pick one. tap anywhere else to close'
                 : reduced
-                  ? 'how are you feeling? tap the deck to see them all'
-                  : 'how are you feeling? flick a card — or tap the deck to see them all')}
+                  ? 'how are you feeling? tap to see them all'
+                  : 'how are you feeling? flick a card, or tap to see them all')}
           </Text>
         </Animated.View>
       </View>

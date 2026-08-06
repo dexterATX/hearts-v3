@@ -95,6 +95,6 @@ export const cardsRules: GameRules<CardsState, CardsMove> = {
 
   outcome(state): Outcome | null {
     if (state.phase !== 'done') return null;
-    return { winner: null, summary: 'the deck is empty — shuffle again whenever you want' };
+    return { winner: null, summary: 'the deck is empty. shuffle again whenever you want' };
   },
 };

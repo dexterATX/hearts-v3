@@ -33,7 +33,7 @@ function AddQuestionCard() {
       <View style={{ gap: spacing.xs }}>
         <Text variant="heading">write a question about yourself</Text>
         <Text variant="small" color={colors.muted}>
-          {partnerName} answers it — and you answer theirs. one score for both of you.
+          {partnerName} answers it, and you answer theirs. one score for both of you.
         </Text>
       </View>
 
@@ -48,7 +48,7 @@ function AddQuestionCard() {
                 onPress={() => setAnswerIndex(i)}
                 accessibilityRole="radio"
                 accessibilityState={{ selected: isTruth }}
-                accessibilityLabel={`option ${i + 1} — the truth`}
+                accessibilityLabel={`option ${i + 1}, the truth`}
                 hitSlop={spacing.sm}
               >
                 <View
@@ -148,7 +148,7 @@ export function QuizScreen({ sessionId }: { sessionId: string }) {
         />
         {(game.questionBank.data?.length ?? 0) === 0 ? (
           <Text variant="small" color={colors.muted} style={{ textAlign: 'center', marginTop: spacing.lg }}>
-            add at least one question first — the pile grows over time
+            add at least one question first. the pile grows over time
           </Text>
         ) : null}
       </ScrollView>

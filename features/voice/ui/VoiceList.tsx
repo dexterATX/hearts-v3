@@ -170,7 +170,7 @@ export function VoiceList() {
         <Card variant="danger" style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
           <Icon name="alert" size={spacing.xl} color={colors.danger} />
           <Text variant="small" color={colors.danger} style={{ flex: 1 }}>
-            the voice notes would not load — pull down to try again
+            the voice notes would not load, pull down to try again
           </Text>
         </Card>
       </View>
@@ -198,7 +198,7 @@ export function VoiceList() {
           <Card style={{ alignItems: 'center', gap: spacing.md, paddingVertical: spacing.xl }}>
             <Icon name="mic" size={spacing.xxl} color={colors.faint} />
             <Text variant="small" color={colors.muted} style={{ textAlign: 'center' }}>
-              no voice notes yet — hold the heart and tell {partnerName} something only their ears get.
+              no voice notes yet. hold the heart and tell {partnerName} something only their ears get.
             </Text>
           </Card>
         ) : (

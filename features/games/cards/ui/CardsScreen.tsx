@@ -86,7 +86,7 @@ export function CardsScreen({ sessionId }: { sessionId: string }) {
           pick your levels
         </Text>
         <Text variant="small" color={colors.muted} style={{ marginBottom: spacing.xl }}>
-          spicy stays out unless you both want it in — talk first, tap second.
+          spicy stays out unless you both want it in. talk first, tap second.
         </Text>
         <View style={{ gap: spacing.sm }}>
           {LEVEL_INFO.map((l) => {
@@ -189,7 +189,7 @@ export function CardsScreen({ sessionId }: { sessionId: string }) {
         </View>
       ) : (
         <Text variant="body" color={colors.muted} style={{ textAlign: 'center' }}>
-          {partnerName}’s draw — answer honestly ♥
+          {partnerName}’s draw. answer honestly ♥
         </Text>
       )}
       {game.lastFailedMove ? (
@@ -199,7 +199,7 @@ export function CardsScreen({ sessionId }: { sessionId: string }) {
         >
           <Icon name="alert" size={spacing.lg} color={colors.danger} />
           <Button
-            label="that did not send — try again"
+            label="that did not send. try again"
             tone="ghost"
             style={{ flex: 1 }}
             onPress={() => void game.retryFailed()}

@@ -32,12 +32,12 @@ export function NewLetterForm({ onSent }: { onSent: () => void }) {
   const submit = async () => {
     setError(null);
     if (!label.trim() || !body.trim()) {
-      setError('give it a label and a few words — even two lines counts');
+      setError('give it a label and a few words. even two lines counts');
       return;
     }
     if (lockType === 'date') {
       if (!/^\d{4}-\d{2}-\d{2}$/.test(unlockAt)) {
-        setError('the date looks off — use YYYY-MM-DD');
+        setError('the date looks off. use YYYY-MM-DD');
         return;
       }
       if (new Date(unlockAt) <= new Date()) {
@@ -76,7 +76,7 @@ export function NewLetterForm({ onSent }: { onSent: () => void }) {
 
       <View style={{ gap: spacing.lg }}>
         <Input
-          placeholder='label — "open when you miss me"'
+          placeholder='label, like "open when you miss me"'
           value={label}
           onChangeText={setLabel}
         />

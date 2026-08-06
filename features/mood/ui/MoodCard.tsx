@@ -146,7 +146,7 @@ export function MoodCard({
           </View>
           <View style={{ flex: 1, justifyContent: 'center', padding: spacing.lg }}>
             <Text variant="body" color={colors.muted}>
-              {partnerName} has not sent a mood yet — the first one lands here the moment they tap it.
+              {partnerName} has not sent a mood yet. the first one lands here the moment they tap it.
             </Text>
           </View>
         </Card>

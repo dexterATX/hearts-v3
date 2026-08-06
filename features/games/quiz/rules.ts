@@ -77,10 +77,10 @@ export const quizRules: GameRules<QuizState, QuizMove> = {
     const { score } = state;
     const summary =
       score === total
-        ? `a perfect ${score} — you two really do know each other`
+        ? `a perfect ${score}. you two really do know each other`
         : score >= total / 2
-          ? `${score} out of ${total} — you know each other better than most`
-          : `${score} out of ${total} — more to learn, more dates to come`;
+          ? `${score} out of ${total}. you know each other better than most`
+          : `${score} out of ${total}. more to learn, more dates to come`;
     return { winner: null, summary }; // nobody loses at knowing each other (§6)
   },
 };

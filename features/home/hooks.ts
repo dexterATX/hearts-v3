@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSession } from '../../lib/session/store';
 import { supabase } from '../../lib/db/client';
 import { on } from '../../lib/sync/bus';
-import { fetchCouple, fetchFeedRows } from './api';
+import { fetchCouple, fetchFeedRows, signedPhotoThumbs } from './api';
 import { buildFeed, buildStory, badgeCounts, isLetterOpenable, type FeedInput, type StoryDay } from './model';
 
 const COUPLE_KEY = ['couple'] as const;
@@ -47,7 +47,35 @@ export function useFeed() {
     return { items: inputs, story: buildStory(inputs) };
   }, [query.data]);
 
-  return { ...query, items, story };
+  // feed photo thumbnails: batch-signed, keyed by the paths themselves so a
+  // refetch with the same photos never re-signs
+  const photoPaths = useMemo(
+    () => (query.data?.photos ?? []).map((p) => p.storage_path),
+    [query.data],
+  );
+  const thumbsQuery = useQuery({
+    queryKey: ['feed-thumbs', coupleId, photoPaths.join(',')],
+    queryFn: async () => {
+      const res = await signedPhotoThumbs(photoPaths);
+      if (!res.ok) throw new Error(res.error.message);
+      return res.data;
+    },
+    enabled: !!coupleId && photoPaths.length > 0,
+    staleTime: 30 * 60_000,
+  });
+
+  // rows look thumbs up by their own id: photo id → signed url
+  const thumbs = useMemo(() => {
+    const urls = thumbsQuery.data ?? {};
+    const map: Record<string, string> = {};
+    for (const p of query.data?.photos ?? []) {
+      const url = urls[p.storage_path];
+      if (url) map[p.id] = url;
+    }
+    return map;
+  }, [query.data, thumbsQuery.data]);
+
+  return { ...query, items, story, thumbs };
 }
 
 /** Badges: unheard voice notes + letters she can open right now. */

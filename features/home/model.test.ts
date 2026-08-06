@@ -1,6 +1,6 @@
 // features/home/model.test.ts — date math, plain node (§2.9).
 import { describe, it, expect } from 'vitest';
-import { parseLocalDate, daysTogether, daysLabel, buildStory, timeAgo, type FeedInput } from './model';
+import { parseLocalDate, daysTogether, daysLabel, buildStory, timeAgo, waveBars, type FeedInput } from './model';
 
 describe('parseLocalDate', () => {
   it('parses YYYY-MM-DD as a LOCAL date, never UTC', () => {
@@ -180,5 +180,36 @@ describe('timeAgo', () => {
     expect(timeAgo(ago(26 * 3_600_000), now)).toBe(
       new Date(2026, 7, 1, 13).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
     );
+  });
+});
+
+describe('waveBars', () => {
+  it('is deterministic per seed — every render draws the same shape', () => {
+    expect(waveBars('note-1')).toEqual(waveBars('note-1'));
+  });
+
+  it('returns `count` bars, each in the 0.25…1 range', () => {
+    const bars = waveBars('note-2', 24);
+    expect(bars).toHaveLength(24);
+    for (const b of bars) {
+      expect(b).toBeGreaterThanOrEqual(0.25);
+      expect(b).toBeLessThanOrEqual(1);
+    }
+  });
+
+  it('distinct seeds draw distinct shapes', () => {
+    expect(waveBars('note-1')).not.toEqual(waveBars('note-2'));
+  });
+
+  // the feed's waveform must match the voice list's bar-for-bar (§2.1 mirror)
+  it('matches the voice slice algorithm on a known seed', () => {
+    // computed once from the shared djb2+LCG definition, pinned so neither
+    // copy can drift without this test speaking up
+    expect(waveBars('abc', 4)).toEqual([
+      0.25 + (942 % 1000) / 1333,
+      0.25 + (797 % 1000) / 1333,
+      0.25 + (888 % 1000) / 1333,
+      0.25 + (975 % 1000) / 1333,
+    ]);
   });
 });

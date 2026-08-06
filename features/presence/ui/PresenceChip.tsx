@@ -152,7 +152,7 @@ export function PresenceChip() {
             }}
           />
           <Text variant="small" color={colors.faint} numberOfLines={1} style={{ flexShrink: 1 }}>
-            {partnerName} — {lastSeenText(lastSeen.data ?? null)}
+            {partnerName} · {lastSeenText(lastSeen.data ?? null)}
           </Text>
         </View>
       </Reveal>
@@ -210,7 +210,7 @@ export function PresenceChip() {
             </>
           ) : sentAt > 0 ? (
             <>
-              {"it's on its way to "}
+              {'sent to '}
               <Text variant="small" weight="medium" color={colors.silver}>
                 {partnerName}
               </Text>

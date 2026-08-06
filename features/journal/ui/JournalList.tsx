@@ -149,7 +149,7 @@ function NewEntryCard() {
         >
           <Icon name={priv ? 'lock' : 'book'} size={spacing.lg} color={priv ? colors.silver : colors.muted} />
           <Text variant="caption" color={priv ? colors.silver : colors.muted} style={{ flexShrink: 1 }}>
-            {priv ? 'private — only your eyes' : 'shared — both of you can read this'}
+            {priv ? 'private, only your eyes' : 'shared, both of you can read this'}
           </Text>
         </View>
       </Pressable>
@@ -181,7 +181,7 @@ export function JournalList() {
         <Card variant="danger" style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
           <Icon name="alert" size={spacing.xl} color={colors.danger} />
           <Text variant="small" color={colors.danger} style={{ flex: 1 }}>
-            the journal would not open — pull down to try again
+            the journal would not open, pull down to try again
           </Text>
         </Card>
       </View>
@@ -200,7 +200,7 @@ export function JournalList() {
         <Card style={{ alignItems: 'center', gap: spacing.md, paddingVertical: spacing.xl }}>
           <Icon name="book" size={spacing.xxl} color={colors.muted} />
           <Text variant="small" color={colors.muted} style={{ textAlign: 'center' }}>
-            the journal is blank — write the first line of it together.
+            the journal is blank. write the first line of it together.
           </Text>
         </Card>
       ) : (
@@ -225,7 +225,7 @@ export function JournalList() {
       )}
 
       <Text variant="caption" color={colors.muted} style={{ textAlign: 'center', marginTop: spacing.xl }}>
-        {excerpt('private entries never leave your phone unlocked — they are yours alone', 200)}
+        {excerpt('private entries never leave your phone unlocked. they are yours alone', 200)}
       </Text>
     </ScrollView>
   );

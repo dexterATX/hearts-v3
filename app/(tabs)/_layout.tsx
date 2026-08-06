@@ -86,6 +86,9 @@ export default function TabsLayout() {
         name="play"
         options={{
           title: 'play',
+          // the arcade's marquee header IS the page header — a bare "play"
+          // title stacked on top of it read as a bug, not chrome
+          headerShown: false,
           tabBarIcon: ({ color }) => <TabIcon name="play" color={color} badge={0} />,
         }}
       />

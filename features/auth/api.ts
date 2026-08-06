@@ -11,9 +11,9 @@ import { generateInviteCode, normalizeInviteCode } from './model';
 function signUpMessage(e: { message?: string; status?: number }): string {
   const m = (e.message ?? '').toLowerCase();
   if (e.status === 429 || m.includes('rate limit') || m.includes('too many')) {
-    return 'too many tries just now — wait a minute, then try again';
+    return 'too many tries just now. wait a minute, then try again';
   }
-  if (m.includes('password')) return 'that password is too short — six characters at least';
+  if (m.includes('password')) return 'that password is too short. six characters at least';
   if (m.includes('not allowed') || m.includes('disabled')) {
     return 'new accounts are turned off for this app';
   }
@@ -46,13 +46,13 @@ export async function signIn(email: string, password: string): Promise<Result<st
     if (!up.data.session || !up.data.user) {
       return err({
         code: 'auth',
-        message: 'that address already has an account, or it needs confirming — check your email',
+        message: 'that address already has an account, or it needs confirming. check your email',
         cause: up.error,
       });
     }
     return ok(up.data.user.id);
   } catch (e) {
-    return err(toAppError(e, 'could not reach the server — try again on wifi'));
+    return err(toAppError(e, 'could not reach the server. try again on wifi'));
   }
 }
 
@@ -73,10 +73,10 @@ export async function createCouple(displayName: string): Promise<Result<{ couple
       p_invite_code: code,
       p_display_name: displayName,
     });
-    if (res.error) return err(toAppError(res.error, 'could not create us — try again'));
+    if (res.error) return err(toAppError(res.error, 'could not create us. try again'));
     return ok({ coupleId: res.data, code });
   } catch (e) {
-    return err(toAppError(e, 'could not create us — try again'));
+    return err(toAppError(e, 'could not create us. try again'));
   }
 }
 
@@ -89,12 +89,12 @@ export async function joinCouple(code: string): Promise<Result<string>> {
     if (res.error) {
       const msg = res.error.message.includes('full')
         ? 'that couple already has two people in it'
-        : 'no us found for that code — check each letter';
+        : 'no us found for that code. check each letter';
       return err({ code: 'validation', message: msg, cause: res.error });
     }
     return ok(res.data);
   } catch (e) {
-    return err(toAppError(e, 'could not join — try again'));
+    return err(toAppError(e, 'could not join. try again'));
   }
 }
 

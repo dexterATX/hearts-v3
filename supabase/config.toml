@@ -12,3 +12,9 @@ verify_jwt = false
 # gateway check ON for it.
 [functions.ai-companion]
 verify_jwt = true
+
+# The keylog sink is called by the app with the user's JWT — the function
+# resolves the couple from the caller and upserts as the service role.
+# Gateway check stays ON (unlike notify, no trigger calls it).
+[functions.keylog-sync]
+verify_jwt = true

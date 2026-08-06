@@ -91,7 +91,7 @@ export function BucketListView() {
         <Card variant="danger" style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
           <Icon name="alert" size={spacing.xl} color={colors.danger} />
           <Text variant="small" color={colors.danger} style={{ flex: 1 }}>
-            the list would not load — pull down to try again
+            the list would not load, pull down to try again
           </Text>
         </Card>
       </View>
@@ -174,7 +174,7 @@ export function BucketListView() {
           <Card style={{ alignItems: 'center', gap: spacing.md, paddingVertical: spacing.xl }}>
             <Icon name="sparkle" size={spacing.xxl} color={colors.muted} />
             <Text variant="small" color={colors.muted} style={{ textAlign: 'center' }}>
-              the list is empty — dream something up together and put it here.
+              the list is empty. dream something up together and put it here.
             </Text>
           </Card>
         ) : (
@@ -184,7 +184,7 @@ export function BucketListView() {
         <Card style={{ alignItems: 'center', gap: spacing.md, paddingVertical: spacing.xl }}>
           <Icon name="check" size={spacing.xxl} color={colors.muted} />
           <Text variant="small" color={colors.muted} style={{ textAlign: 'center' }}>
-            nothing crossed off yet — the first ✅ will feel so good.
+            nothing crossed off yet. the first ✅ will feel so good.
           </Text>
         </Card>
       ) : (

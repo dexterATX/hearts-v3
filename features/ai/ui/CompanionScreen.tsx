@@ -35,7 +35,7 @@ export function CompanionScreen() {
         the companion
       </Text>
       <Text variant="small" color={colors.muted} style={{ marginBottom: spacing.xl, maxWidth: PROSE_MEASURE }}>
-        a quiet helper for the two of you — ideas, drafts, questions, recaps.
+        a quiet helper for the two of you: ideas, drafts, questions, recaps.
         it never posts anything; what it writes is yours to shape.
       </Text>
 

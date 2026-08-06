@@ -137,7 +137,7 @@ export function PhotoGrid({ albumId }: { albumId: string | null }) {
       >
         <Icon name="alert" size={spacing.xl} color={colors.danger} />
         <Text variant="small" color={colors.danger} style={{ flex: 1 }}>
-          the photos would not load — check your signal and pull down to try again
+          the photos would not load, check your signal and pull down to try again
         </Text>
       </Card>
     );
@@ -149,8 +149,8 @@ export function PhotoGrid({ albumId }: { albumId: string | null }) {
         <Icon name="image" size={spacing.xxl} color={colors.muted} />
         <Text variant="small" color={colors.muted} style={{ textAlign: 'center' }}>
           {albumId
-            ? 'this album is still empty — add the first photo of it'
-            : 'no photos yet — the first one you add becomes page one of us'}
+            ? 'this album is still empty. add the first photo of it'
+            : 'no photos yet. the first one you add becomes page one of us'}
         </Text>
       </Card>
     );

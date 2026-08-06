@@ -44,7 +44,7 @@ export default function LetterRoute() {
             color={colors.muted}
             style={{ textAlign: 'center', marginTop: spacing.lg }}
           >
-            this letter seems to have drifted away — it may have been a ghost of a
+            this letter seems to have drifted away. it may have been a ghost of a
             connection hiccup. it will sort itself out.
           </Text>
         </Card>
@@ -103,7 +103,7 @@ function LetterBody({
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
               <Icon name="mic" size={16} color={colors.silver} />
               <Text variant="caption" color={colors.muted} style={{ flex: 1 }}>
-                this one has {mine ? 'your' : `${partnerName}’s`} voice in it — find it under voice notes
+                this one has {mine ? 'your' : `${partnerName}’s`} voice in it, find it under voice notes
               </Text>
             </View>
           ) : null}

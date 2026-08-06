@@ -48,8 +48,8 @@ const KIND_WORD: Record<string, string> = {
   voice_notes: 'a voice note',
   canvas_strokes: 'a brushstroke',
   quiz_questions: 'a quiz question',
-  bucket_list: 'a dream for the list',
-  events: 'a day on the calendar',
+  bucket_list: 'a bucket list item',
+  events: 'an event',
   journal_entries: 'a journal entry',
 };
 
@@ -106,11 +106,11 @@ function SyncLine({
           ? 'sending what you queued…'
           : online
             ? pending === 1
-              ? 'one thing is waiting for signal — nothing is lost'
-              : `${pending} things are waiting for signal — nothing is lost`
+              ? 'one thing queued, sending shortly'
+              : `${pending} things queued, sending shortly`
             : pending === 1
-              ? 'one thing will send the moment signal returns — nothing is lost'
-              : `${pending} things will send the moment signal returns — nothing is lost`}
+              ? 'one thing queued, it will send when signal returns'
+              : `${pending} things queued, they will send when signal returns`}
       </Text>
     </View>
   );
@@ -171,8 +171,8 @@ function DeadRow({ d, queryClient }: { d: DeadOp; queryClient: QueryClient }) {
       >
         <Icon name="alert" size={16} color={colors.danger} />
         <Text variant="small" color={colors.muted} style={{ flex: 1 }}>
-          {KIND_WORD[d.op.table] ?? 'something'} did not save — the server refused it, which
-          usually means it is already there. tap to let it go and see the honest state.
+          {KIND_WORD[d.op.table] ?? 'something'} did not save. usually that means it is
+          already there. tap to dismiss and see the current state.
         </Text>
         <Icon name="close" size={14} color={colors.faint} />
       </Animated.View>
@@ -207,7 +207,7 @@ export function OutboxBanner() {
             color={colors.muted}
             style={{ alignSelf: 'center', paddingVertical: spacing.xs, maxWidth: '90%' }}
           >
-            offline — everything here is from this phone
+            offline, showing what is saved on this phone
           </Text>
         ) : null}
       </View>

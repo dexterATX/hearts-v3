@@ -73,7 +73,7 @@ export function useRecorder() {
     setError(null);
     const perm = await AudioModule.requestRecordingPermissionsAsync();
     if (!perm.granted) {
-      setError('the microphone is off — hearts needs it for voice notes');
+      setError('the microphone is off. hearts needs it for voice notes');
       return;
     }
     await setAudioModeAsync({ playsInSilentMode: true, allowsRecording: true });
@@ -90,7 +90,7 @@ export function useRecorder() {
       await setAudioModeAsync({ playsInSilentMode: true, allowsRecording: false });
       const uri = recorder.uri;
       if (!uri) {
-        setError('that was too quick — hold the heart a little longer');
+        setError('that was too quick. hold the heart a little longer');
         return false;
       }
       const durationMs = Math.max(1, Date.now() - startedAt.current);
@@ -99,7 +99,7 @@ export function useRecorder() {
 
       const uploaded = await uploadAudio(storagePath, uri);
       if (!uploaded.ok) {
-        setError('your voice note did not get through — try again on wifi');
+        setError('your voice note did not get through. try again on wifi');
         return false;
       }
 

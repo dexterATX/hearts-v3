@@ -103,6 +103,6 @@ export async function streamCompanion(
     if ((e as { name?: string })?.name === 'AbortError') {
       return err({ code: 'unknown', message: 'stopped mid-thought', cause: e });
     }
-    return err(toAppError(e, 'the companion drifted off — try again'));
+    return err(toAppError(e, 'the companion drifted off. try again'));
   }
 }

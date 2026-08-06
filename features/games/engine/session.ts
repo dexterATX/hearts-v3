@@ -98,7 +98,7 @@ export async function appendMove(
     }
     return ok(res.data);
   } catch (e) {
-    return err(toAppError(e, 'the move did not land — check your signal'));
+    return err(toAppError(e, 'the move did not land. check your signal'));
   }
 }
 

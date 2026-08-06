@@ -26,7 +26,7 @@ export function PairScreen() {
   const onJoin = async () => {
     setError(null);
     if (!isValidInviteCode(theirCode)) {
-      setError('codes are six letters and numbers — check each one');
+      setError('codes are six letters and numbers. check each one');
       return;
     }
     const res = await join(normalizeInviteCode(theirCode));
@@ -67,7 +67,7 @@ export function PairScreen() {
       {myCode ? (
         <Card style={{ alignItems: 'center', gap: spacing.lg }}>
           <Text variant="small" color={colors.muted} style={{ textAlign: 'center' }}>
-            share this code — it is only ours
+            share this code. it is only ours
           </Text>
           {/* the code is the hero of this screen: silver on glass, in a panel
               of its own so it reads as a thing to be handed over */}
@@ -110,7 +110,7 @@ export function PairScreen() {
       ) : (
         <Card style={{ gap: spacing.lg }}>
           <Text variant="small" color={colors.muted}>
-            start us — you will get a code to share
+            start us. you will get a code to share
           </Text>
           <Input placeholder="what should they call you?" value={name} onChangeText={setName} />
           <Button
@@ -125,7 +125,7 @@ export function PairScreen() {
 
       <Card style={{ gap: spacing.lg }}>
         <Text variant="small" color={colors.muted}>
-          or you already have a code — type it in
+          or you already have a code, type it in
         </Text>
         <Input
           code

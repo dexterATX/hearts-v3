@@ -68,7 +68,7 @@ function AnniversaryCard() {
   return (
     <Card style={{ gap: spacing.md }}>
       <Text variant="small" color={colors.muted}>
-        the day it started — this powers the home counter
+        the day it started. this powers the home counter
       </Text>
       <Input
         placeholder="YYYY-MM-DD"
@@ -84,7 +84,7 @@ function AnniversaryCard() {
         disabled={!coupleId || !date}
         onPress={() => {
           if (!validAnniversary(date)) {
-            setError('that date does not look real — YYYY-MM-DD, not in the future');
+            setError('that date does not look real. use YYYY-MM-DD, not in the future');
             return;
           }
           setError(null);
@@ -142,7 +142,7 @@ function LockCard() {
   return (
     <Card style={{ gap: spacing.md }}>
       <Text variant="small" color={colors.muted}>
-        the heart-lock — {lock.biometricsAvailable ? 'face/fingerprint + your PIN' : 'a PIN only your two phones know'}
+        the heart-lock: {lock.biometricsAvailable ? 'face/fingerprint + your PIN' : 'a PIN only your two phones know'}
       </Text>
       {lock.configured ? (
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
@@ -152,7 +152,7 @@ function LockCard() {
             color={set ? colors.success : colors.blue}
           />
           <Text variant="small" color={set ? colors.success : colors.blue} style={{ flex: 1 }}>
-            {set ? 'PIN updated ♥' : 'the lock is on — the app locks whenever it leaves the screen'}
+            {set ? 'PIN updated ♥' : 'the lock is on. the app locks whenever it leaves the screen'}
           </Text>
         </View>
       ) : (
@@ -194,7 +194,7 @@ function ExportCard() {
   return (
     <Card style={{ gap: spacing.md }}>
       <Text variant="small" color={colors.muted}>
-        everything, in your hands — moods, letters, journal, games, all of it ({exportFileName()}).
+        everything, in your hands: moods, letters, journal, games, all of it ({exportFileName()}).
         you pick the folder; the file lands there.
       </Text>
       {error ? (

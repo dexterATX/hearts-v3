@@ -77,7 +77,7 @@ export default function LettersTab() {
             <View style={{ flexDirection: 'row', gap: spacing.md }}>
               <Icon name="alert" size={18} color={colors.danger} />
               <Text variant="small" color={colors.danger} style={{ flex: 1 }}>
-                the letters would not open — pull down to try again
+                the letters would not open, pull down to try again
               </Text>
             </View>
           </Card>
@@ -89,7 +89,7 @@ export default function LettersTab() {
               color={colors.muted}
               style={{ marginTop: spacing.lg, textAlign: 'center' }}
             >
-              no letters yet. write the first one and seal it — someday it opens
+              no letters yet. write the first one and seal it. someday it opens
               on exactly the right day.
             </Text>
           </Card>
@@ -105,7 +105,7 @@ export default function LettersTab() {
             ) : null}
             {shelf(letters.data ?? []).length > 0 ? (
               <View>
-                <SectionLabel>the shelf — opened, kept, rereadable</SectionLabel>
+                <SectionLabel>the shelf: opened, kept, rereadable</SectionLabel>
                 {shelf(letters.data ?? []).map((l) => (
                   <LetterEntry key={l.id} letter={l} mine={l.author_id === myId} />
                 ))}

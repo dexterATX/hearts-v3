@@ -18,7 +18,7 @@ function AddEventCard() {
   const submit = async () => {
     setError(null);
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-      setError('the date looks off — use YYYY-MM-DD');
+      setError('the date looks off. use YYYY-MM-DD');
       return;
     }
     const okAdd = await add({ title, date, recurring, remindDaysBefore: 1 });
@@ -94,7 +94,7 @@ export function EventsView() {
         <Card variant="danger" style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
           <Icon name="alert" size={spacing.xl} color={colors.danger} />
           <Text variant="small" color={colors.danger} style={{ flex: 1 }}>
-            the calendar would not load — pull down to try again
+            the calendar would not load, pull down to try again
           </Text>
         </Card>
       </View>
@@ -108,7 +108,7 @@ export function EventsView() {
         <Card style={{ alignItems: 'center', gap: spacing.md, paddingVertical: spacing.xl }}>
           <Icon name="calendar" size={spacing.xxl} color={colors.faint} />
           <Text variant="small" color={colors.muted} style={{ textAlign: 'center' }}>
-            no days on the calendar yet — add the one you never want to forget.
+            no days on the calendar yet. add the one you never want to forget.
           </Text>
         </Card>
       ) : (

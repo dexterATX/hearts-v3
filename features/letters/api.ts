@@ -37,7 +37,7 @@ export async function fetchLetterBody(letterId: string): Promise<Result<string>>
       const sealed = res.error.message.includes('still sealed');
       return err({
         code: sealed ? 'validation' : 'rls',
-        message: sealed ? 'not yet — this one is still sealed' : 'could not open the letter',
+        message: sealed ? 'not yet. this one is still sealed' : 'could not open the letter',
         cause: res.error,
       });
     }

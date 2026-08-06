@@ -26,7 +26,7 @@ export function daysTogether(anniversaryIso: string | null, now = new Date()): n
 }
 
 export function daysLabel(days: number | null): string {
-  if (days === null) return 'our story started — set the day in settings';
+  if (days === null) return 'our story started. set the day in settings';
   if (days === 0) return 'day one. today. ♥';
   return `${days} days of us`;
 }
@@ -172,6 +172,23 @@ export function timeAgo(at: string, now = new Date()): string {
   return new Date(at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
+/** Pseudo-waveform bars for a voice-note story row, seeded by the note id so
+ *  every render (and both phones) draw the same shape. This is the SAME
+ *  algorithm as features/voice's waveBars, re-implemented here on purpose:
+ *  features never import each other (§2.1), and the feed's waveform must
+ *  match the one in the voice list bar-for-bar. */
+export function waveBars(seed: string, count = 24): number[] {
+  let h = 5381;
+  for (let i = 0; i < seed.length; i++) h = ((h << 5) + h + seed.charCodeAt(i)) | 0;
+  const bars: number[] = [];
+  let state = h >>> 0;
+  for (let i = 0; i < count; i++) {
+    state = (state * 1664525 + 1013904223) >>> 0; // LCG — deterministic
+    bars.push(0.25 + (state % 1000) / 1333); // 0.25 … 1.0
+  }
+  return bars;
+}
+
 export function feedLine(item: FeedItem, partnerName: string, myId: string): string {
   const who = item.authorId === myId ? 'you' : partnerName;
   switch (item.kind) {
@@ -185,8 +202,11 @@ export function feedLine(item: FeedItem, partnerName: string, myId: string): str
     case 'letter':
       return item.opened ? `${who} opened a letter` : `${who} sealed a letter`;
     case 'voice':
-      return item.heard ? `${who} left a voice note` : `${who} left a voice note — unheard`;
+      // 'new' only ever tags a partner's note you have not played — never your own
+      return item.heard || item.authorId === myId
+        ? `${who} left a voice note`
+        : `${who} left a new voice note`;
     case 'photo':
-      return item.caption ? `${who} added a photo — ${item.caption}` : `${who} added a photo`;
+      return item.caption ? `${who} added a photo: ${item.caption}` : `${who} added a photo`;
   }
 }

@@ -21,3 +21,5 @@ export { QuizScreen } from './quiz/ui/QuizScreen';
 export { cardsRules, deckFor } from './cards/rules';
 export { useCards, useStartCards } from './cards/hooks';
 export { CardsScreen } from './cards/ui/CardsScreen';
+
+export { PlayScreen } from './ui/PlayScreen';

@@ -77,7 +77,7 @@ export function HangmanScreen({ sessionId }: { sessionId: string }) {
           {game.outcome.summary}
         </Text>
         <Text variant="caption" color={colors.muted} style={{ textAlign: 'center', marginTop: spacing.xl }}>
-          every game ends with an exit — head back whenever you like
+          every game ends with an exit. head back whenever you like
         </Text>
       </View>
     );
@@ -92,7 +92,7 @@ export function HangmanScreen({ sessionId }: { sessionId: string }) {
         <View style={{ gap: spacing.sm }}>
           <Text variant="title">pick a word for {partnerName}</Text>
           <Text variant="small" color={colors.muted}>
-            it never leaves your phone — only you will ever see it. {partnerName} gets a daisy and six
+            it never leaves your phone. only you will ever see it. {partnerName} gets a daisy and six
             petals.
           </Text>
         </View>
@@ -115,7 +115,7 @@ export function HangmanScreen({ sessionId }: { sessionId: string }) {
 
         {game.lastFailedMove ? (
           <FailureNotice
-            message={`that did not reach ${partnerName}’s phone — check your signal and try again`}
+            message={`that did not reach ${partnerName}’s phone. check your signal and try again`}
           />
         ) : null}
       </ScrollView>
@@ -146,7 +146,7 @@ export function HangmanScreen({ sessionId }: { sessionId: string }) {
         <Text variant="body" weight="medium" color={colors.blue} style={{ textAlign: 'center' }}>
           {waitingOnSetter
             ? `resolving ${partnerName}’s guess…`
-            : `${partnerName} is guessing — watch it happen live`}
+            : `${partnerName} is guessing. watch it happen live`}
         </Text>
       ) : iGuess && !waitingOnSetter ? (
         <View

@@ -37,7 +37,7 @@ export async function registerForPush(): Promise<Result<string>> {
     const final =
       status === 'granted' ? status : (await Notifications.requestPermissionsAsync()).status;
     if (final !== 'granted') {
-      return err({ code: 'validation', message: 'notifications are off — turn them on to feel the pings' });
+      return err({ code: 'validation', message: 'notifications are off. turn them on to feel the pings' });
     }
 
     const projectId = Constants.expoConfig?.extra?.eas?.projectId as string | undefined;

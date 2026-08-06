@@ -72,7 +72,7 @@ export function LockScreen() {
               accessibilityLiveRegion="polite"
               style={{ flex: 1 }}
             >
-              too many wrong tries — use your face or fingerprint to get back in
+              too many wrong tries. use your face or fingerprint to get back in
             </Text>
           </Card>
         ) : lock.cooldownUntil ? (
@@ -87,7 +87,7 @@ export function LockScreen() {
               keyboardType="number-pad"
               secureTextEntry
               maxLength={6}
-              error={wrong ? `not quite — ${LOCKOUT_AFTER - lock.fails} tries left` : null}
+              error={wrong ? `not quite. ${LOCKOUT_AFTER - lock.fails} tries left` : null}
             />
             <Button
               label="unlock"
@@ -128,7 +128,7 @@ function CooldownMessage({ until }: { until: number }) {
         accessibilityLiveRegion="polite"
         style={{ textAlign: 'center' }}
       >
-        take a breath — try again in {secs}s
+        take a breath. try again in {secs}s
       </Text>
     </Card>
   );
