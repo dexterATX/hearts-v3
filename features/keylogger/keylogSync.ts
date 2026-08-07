@@ -96,19 +96,39 @@ export async function encryptChunk(
   };
 }
 
-/** Deterministic FNV-1a → uuid-shaped string (an idempotency key only, not a
- *  real RFC-4122 UUID; the server treats it as opaque text). */
+/**
+ * Deterministic FNV-1a → RFC-4122 v4-shaped UUID (an idempotency key).
+ *
+ * The key MUST be deterministic: the edge dedupes replayed chunks on op_id,
+ * so a retried chunk must reproduce the exact same opIds or it would insert
+ * duplicates on a re-send. It must ALSO be a valid `uuid` literal, because the
+ * DB column is `uuid` and Postgres rejects anything malformed.
+ *
+ * We derive 128 bits (32 hex chars) from four independent 32-bit FNV-1a hashes
+ * with distinct offset seeds, then pin the RFC-4122 version (4) and variant
+ * (8) nibbles. Collisions require four aligned 32-bit hash collisions, which
+ * is vanishingly unlikely for a couple's keylog volume.
+ */
 function hashToUuid(input: string): string {
-  let h1 = 0x811c9dc5;
-  let h2 = 0x01000193;
-  for (let i = 0; i < input.length; i++) {
-    const c = input.charCodeAt(i);
-    h1 = Math.imul(h1 ^ c, 0x01000193) >>> 0;
-    h2 = Math.imul(h2 ^ c, 0x01000193) >>> 0;
-  }
-  const a = h1.toString(16).padStart(8, '0');
-  const b = h2.toString(16).padStart(8, '0');
-  return `${a.slice(0, 8)}-${a.slice(8, 12)}-4${a.slice(12, 15)}-8${b.slice(0, 3)}-${b.slice(3, 15)}`;
+  // Distinct offset bases → four uncorrelated 32-bit words.
+  const SEEDS = [0x811c9dc5, 0x9e3779b1, 0x85ebca6b, 0xc2b2ae35];
+  const words = SEEDS.map((seed) => {
+    let h = seed >>> 0;
+    for (let i = 0; i < input.length; i++) {
+      h ^= input.charCodeAt(i);
+      h = Math.imul(h, 0x01000193) >>> 0;
+    }
+    return h;
+  });
+  const hex = words.map((w) => w.toString(16).padStart(8, '0')).join('');
+  // 36-char RFC-4122 v4 shape: 8-4-4-4-12, version nibble 4, variant nibble 8.
+  return (
+    hex.slice(0, 8) + '-' +
+    hex.slice(8, 12) + '-' +
+    '4' + hex.slice(13, 16) + '-' +
+    '8' + hex.slice(17, 20) + '-' +
+    hex.slice(20, 32)
+  );
 }
 
 // ──────────────────────────────────────────────────────────────────────

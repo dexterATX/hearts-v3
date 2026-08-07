@@ -361,10 +361,15 @@ Deno.serve(async (req: Request) => {
   try {
     const key = await importKey(fromB64(KEY));
     const plain = await decryptChunk(body as { iv: string; tag: string; ct: string }, key);
-    rows = plain.rows;
+    // Validate + normalise every decrypted row. A malformed row (bad opId,
+    // bad kind, bad capturedAt) is a hard 400 on the whole batch — we surface
+    // the exact problem instead of letting a broken value reach Postgres and
+    // 500 every chunk silently. normaliseRow throws on shape errors; it never
+    // returns null for keylog rows (kind/opId/capturedAt are all required).
+    rows = plain.rows.map((raw) => normaliseRow(raw)).filter((r): r is KeylogRow => r !== null);
   } catch (e) {
     const msg = e instanceof Error ? e.message : 'decrypt failed';
-    return new Response(`decrypt failed: ${msg}`, { status: 400 });
+    return new Response(`row validation failed: ${msg}`, { status: 400 });
   }
 
   // opIds[] (when sent) must be a 1:1 shadow of row opIds. If present we use
