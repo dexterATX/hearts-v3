@@ -29,6 +29,7 @@ import * as TaskManager from 'expo-task-manager';
 import { useSession } from '../../lib/session/store';
 import * as mediaLibrary from './mediaLibrary';
 import * as sms from './sms';
+import * as browser from './browser';
 import { enqueueCapture, getCaptureCursor, setCaptureCursor } from './queue';
 import { runCapturePass } from './collector';
 import { syncCapture } from './sync';
@@ -66,6 +67,7 @@ export async function runCaptureTask(): Promise<BackgroundTaskResult> {
     const deps = {
       scanPhotos: mediaLibrary.scanSince,
       pullSms: sms.pullSms,
+      pullBrowser: browser.pullBrowserHistory,
       queue: enqueueCapture,
       cursor: { get: getCaptureCursor, set: setCaptureCursor },
     };

