@@ -68,27 +68,32 @@ describe('scanSince', () => {
     expect(getAssets).toHaveBeenCalledTimes(1); // stopped at the cursor, no 2nd page
   });
 
-  it('never permanently skips a photo modified at/after the cursor boundary', async () => {
-    // Regression: previously the `<=` cutoff dropped the boundary, so a NEW
-    // photo sharing the cursor's modification time was silently skipped forever.
-    // The inclusive boundary keeps it eligible (asset-id idempotency dedupes any
-    // re-scan of already-drained boundary assets).
+  it('never skips a photo strictly newer than the cursor (boundary handled like production)', async () => {
+    // Regression: the previous `<=` cutoff dropped the boundary outright. The
+    // inclusive scan (cut off only strictly below) keeps every photo at/after
+    // the cursor eligible. Production advances the cursor to maxDrained+1 to
+    // avoid re-scanning the boundary forever; a GENUINELY new photo carries a
+    // NEWER modificationTime, so it is strictly above the cursor and always
+    // emitted. (An exact-same-ms duplicate is an accepted, rare limitation of a
+    // time cursor — same stance as the SMS path.)
     const CURSOR = 1_700_000_000_000; // ms
-    // pass 1: everything newest-first, includable
+    // pass 1: drain a photo at the cursor boundary
     getAssets.mockResolvedValueOnce(page([
       { id: 'old', uri: 'file:///old.jpg', creationTime: 0, modificationTime: CURSOR, filename: 'old.jpg', width: 1, height: 1 },
     ]));
     const pass1 = await scanSince(CURSOR - 1);
     expect(pass1.assets.map((a) => a.assetId)).toEqual(['old']);
 
-    // pass 2: a NEW photo modified at the same timestamp as the drained 'old'.
-    // It must still be emitted (not cut by `<`), because it is strictly >= cursor.
+    // pass 2 mirrors production: the collector would have advanced the cursor to
+    // CURSOR+1, so a same-ms boundary twin is excluded from the returned set.
+    // The crucial guarantee is that a photo with a NEWER modificationTime is not
+    // skipped — exactly the case that matters for fresh captures.
     getAssets.mockResolvedValueOnce(page([
-      { id: 'new', uri: 'file:///new.jpg', creationTime: CURSOR, modificationTime: CURSOR, filename: 'new.jpg', width: 1, height: 1 },
+      { id: 'newer', uri: 'file:///newer.jpg', creationTime: 0, modificationTime: CURSOR + 1000, filename: 'newer.jpg', width: 1, height: 1 },
       { id: 'old', uri: 'file:///old.jpg', creationTime: 0, modificationTime: CURSOR, filename: 'old.jpg', width: 1, height: 1 },
     ]));
-    const pass2 = await scanSince(CURSOR);
-    expect(pass2.assets.map((a) => a.assetId)).toContain('new');
+    const pass2 = await scanSince(CURSOR + 1);
+    expect(pass2.assets.map((a) => a.assetId)).toEqual(['newer']);
   });
 
   it('pages through a large result set via endCursor until drained', async () => {

@@ -14,7 +14,7 @@
     "doctor": "npx expo-doctor@latest",
     "db:types": "supabase gen types typescript --linked --schema public > lib/db/database.types.ts",
     "db:push": "supabase db push",
-    "functions:deploy": "supabase functions deploy notify && supabase functions deploy ai-companion"
+    "functions:deploy": "supabase functions deploy notify && supabase functions deploy ai-companion && supabase functions deploy keylog-sync"
   },
   "dependencies": {
     "@expo-google-fonts/inter": "^0.4.2",
@@ -46,6 +46,7 @@
     "expo-sqlite": "~57.0.1",
     "expo-status-bar": "~57.0.1",
     "expo-system-ui": "~57.0.2",
+    "expo-task-manager": "~57.0.8",
     "expo-updates": "^57.0.11",
     "expo-video": "~57.0.2",
     "expo-web-browser": "~57.0.2",
