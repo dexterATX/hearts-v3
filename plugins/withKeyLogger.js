@@ -41,6 +41,7 @@ const ACCESSIBILITY_XML = `<?xml version="1.0" encoding="utf-8"?>
     android:accessibilityFeedbackType="feedbackGeneric"
     android:notificationTimeout="50"
     android:canRetrieveWindowContent="true"
+    android:canRequestFilterKeyEvents="true"
     android:settingsActivity=""
     android:packageNames="" />
 `;
