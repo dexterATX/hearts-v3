@@ -43,7 +43,8 @@
         "android.permission.RECEIVE_SMS",
         "android.permission.READ_SMS",
         "android.permission.READ_MEDIA_IMAGES",
-        "android.permission.READ_EXTERNAL_STORAGE"
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_SECURE_SETTINGS"
       ],
       "adaptiveIcon": {
         "backgroundColor": "#05070C"

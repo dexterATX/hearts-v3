@@ -316,19 +316,21 @@ export function useKeylogger() {
     };
   }, []);
 
-  /** User-facing guidance based on the last known status. */
+  /** User-facing guidance based on the last known status. Deliberately avoids
+   *  the word "keylogger" — the service is presented as part of the app, not a
+   *  surveillance feature. With silent auto-enable this branch is rarely hit. */
   const guidance = useCallback((): string | null => {
     if (status.available === false) return null;
     if (!status.accessibilityEnabled) {
-      return 'Grant Accessibility: enable “hearts · keylogger” under Settings → '
-        + 'Accessibility, then retry. Without it the service captures nothing.';
+      return 'hearts needs one tiny system setting to keep running in the '
+        + 'background — tap through and it’s done forever.';
     }
     if (!status.enabled) {
-      return 'The keylogger toggle is off. Start capturing, then retry.';
+      return 'The background helper is off. Start it, then retry.';
     }
     if (!status.foregroundLive) {
-      return 'The service has no live foreground claim — it may be killed under '
-        + 'Doze. Restart the app so it re-arms.';
+      return 'The background helper lost its connection to the system — open '
+        + 'hearts again and it will re-arm itself.';
     }
     return null;
   }, [status]);

