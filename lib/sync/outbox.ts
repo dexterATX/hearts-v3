@@ -1,7 +1,7 @@
 // lib/sync/outbox.ts — the write path (spec §2.3). UI NEVER calls Supabase
 // directly; every mutation enqueues here. Optimistic application happens in
 // the feature's hooks.ts (TanStack setQueryData) BEFORE enqueue resolves.
-import { supabase } from '../db/client';
+import { supabase, getValidSession } from '../db/client';
 import { useSession } from '../session/store';
 import { newUuid as newOpId } from '../id';
 import {
@@ -195,8 +195,8 @@ export async function flush(): Promise<void> {
   // Never send without a session: an unauthenticated write takes a 42501 from
   // RLS, which classifies as a permanent 4xx and DELETES the op. Ops stay
   // queued instead and drain on the next authenticated flush.
-  const { data: auth } = await supabase.auth.getSession();
-  if (!auth.session) return;
+  const authed = await getValidSession();
+  if (!authed) return;
 
   flushing = true;
   void emitStatus();

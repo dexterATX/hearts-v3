@@ -5,7 +5,8 @@
 // Mocks (per-file, via vi.mock):
 //   • ./queue          — fake pendingCapture/removeCaptured (no sqlite)
 //   • ../../lib/db/client — fake supabase: auth.getSession + storage.upload
-//   • global.fetch     — programmable, used for photo bytes + the edge POST
+//   • expo-file-system     — fake File (local photo bytes; fetch can't read file://)
+//   • global.fetch     — programmable, used for the edge POST only
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { CaptureItem } from './queue';
 
@@ -32,6 +33,13 @@ vi.mock('../../lib/db/client', () => ({
       from: () => ({ upload: storageUpload }),
     },
   },
+  // Mirror what the real helper does for a VALID (never-expired) fake token:
+  // resolve the same session the test's getSession mock produces. A null
+  // session here means "not authenticated" → sync stays queued.
+  getValidSession: vi.fn(async () => {
+    const { data } = await getSession();
+    return data.session ? { session: data.session } : null;
+  }),
 }));
 
 vi.mock('./queue', () => ({
@@ -45,6 +53,28 @@ vi.mock('./queue', () => ({
 
 const fetchMock = vi.fn();
 vi.stubGlobal('fetch', fetchMock);
+
+// Local photo bytes are now read via expo-file-system's File (fetch cannot
+// resolve file:// URIs). Stub it so `new File(file://...).arrayBuffer()` yields
+// bytes without touching the native FS in the test env.
+vi.mock('expo-file-system', () => ({
+  File: class {
+    uri: string;
+    constructor(...uris: (string | { uri: string })[]) {
+      this.uri = uris.map((u) => (typeof u === 'string' ? u : u.uri)).join('');
+    }
+    async arrayBuffer() {
+      // A read failure for the "slow" fixture simulates the timeout/failure
+      // path (e.g. an unreadable local file): it must skip, not confirm.
+      if (this.uri.includes('slow')) throw new DOMException('aborted', 'AbortError');
+      // A read that NEVER settles (e.g. a wedged local file) must still be
+      // bounded by UPLOAD_TIMEOUT_MS so syncCapture cannot hang the whole drain.
+      // The test drives this with fake timers; "hang" resolves only on stop.
+      if (this.uri.includes('hang')) return new Promise<ArrayBuffer>(() => {});
+      return new ArrayBuffer(8);
+    }
+  },
+}));
 
 import { syncCapture, isPhotoItem } from './sync';
 import { removeCaptured } from './queue';
@@ -103,10 +133,8 @@ describe('syncCapture — happy path', () => {
   it('uploads the photo bytes, POSTs metadata, and confirms only on full success', async () => {
     pendingListH.push(photoItem('p1', 'file:///p/p1.jpg'), smsItem('s1'));
 
-    // first fetch = the photo byte fetch (arrayBuffer response); second fetch =
-    // the edge function POST (2xx accepting all rows). Order is deterministic:
-    // uploads precede POST.
-    fetchMock.mockImplementationOnce(async () => ({ arrayBuffer: async () => new ArrayBuffer(8) }));
+    // The only fetch is the edge function POST (2xx accepting all rows) — the
+    // photo bytes come from the expo-file-system File mock, not fetch.
     fetchMock.mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ droppedRows: [] }) });
 
     const res = await syncCapture('couple-1');
@@ -115,10 +143,7 @@ describe('syncCapture — happy path', () => {
     expect(res.accepted).toBe(2);
     expect(res.failed).toBe(0);
 
-    // photo bytes were fetched from its uri (with an abort signal for the
-    // timeout guard), then uploaded to the storage bucket
-    expect(fetchMock).toHaveBeenCalledWith('file:///p/p1.jpg', expect.any(Object));
-    expect(fetchMock.mock.calls[0]![1]).toMatchObject({ signal: expect.any(AbortSignal) });
+    // the photo's local bytes were read and uploaded to the storage bucket
     expect(storageUpload).toHaveBeenCalledTimes(1);
     expect(storageUpload.mock.calls[0]![0]).toBe('couple-1/p1.jpg');
     expect(storageUpload.mock.calls[0]![2]).toMatchObject({ contentType: 'image/jpeg', upsert: true });
@@ -152,7 +177,6 @@ describe('syncCapture — happy path', () => {
       payload: { uri: 'file:///p/p2.jpg', creationTime: 100, filename: 'p2.jpg', mimeType: 'image/png', width: 100, height: 100 },
       created_at: '2026-01-01T00:00:00.000Z',
     });
-    fetchMock.mockImplementationOnce(async () => ({ arrayBuffer: async () => new ArrayBuffer(8) }));
     fetchMock.mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ droppedRows: [] }) });
 
     const res = await syncCapture('couple-1');
@@ -169,7 +193,7 @@ describe('syncCapture — happy path', () => {
     pendingListH.push(photoItem('p1'));
     storageUpload.mockResolvedValueOnce({ error: { message: 'quota' } });
     // photo upload fails → the batch is empty → no edge POST fetch at all
-    fetchMock.mockImplementationOnce(async () => ({ arrayBuffer: async () => new ArrayBuffer(8) }));
+    // (photo bytes come from the File mock; only the storage upload is at fault)
 
     const res = await syncCapture('couple-1');
     expect(res.uploaded).toBe(0);
@@ -220,15 +244,36 @@ describe('syncCapture — happy path', () => {
     expect(removeCaptured).not.toHaveBeenCalled();
   });
 
-  it('survives a photo byte fetch that times out (skips, not confirmed)', async () => {
+  it('survives a photo byte read that fails (skips, not confirmed)', async () => {
     pendingListH.push(photoItem('slow', 'file:///slow/p.jpg'));
-    // byte fetch aborts (AbortError) → upload skipped, not confirmed
-    fetchMock.mockRejectedValueOnce(new DOMException('aborted', 'AbortError'));
+    // The local byte read (expo-file-system File) throws for the "slow" fixture
+    // (File mock rejects) → upload skipped, not confirmed, so it is retried later.
     const res = await syncCapture('couple-1');
     expect(res.uploaded).toBe(0);
     expect(res.failed).toBe(1); // not confirmed → retried later
     expect(res.accepted).toBe(0);
     expect(removeCaptured).not.toHaveBeenCalled();
+  });
+
+  it('bounds a hung local photo read by the timeout so it cannot wedge the drain', async () => {
+    vi.useFakeTimers();
+    try {
+      pendingListH.push(photoItem('hang2', 'file:///hang/p.jpg'));
+      // A read that NEVER settles must still be aborted by UPLOAD_TIMEOUT_MS so a
+      // wedged local file cannot stall the whole serial drain (which would block
+      // SMS/browser rows behind it). We advance fake time past the 20s timeout;
+      // the drain must then finish with the photo skipped, not confirmed.
+      const runPromise = syncCapture('couple-1');
+      await vi.advanceTimersByTimeAsync(20_001);
+      const res = await runPromise;
+      expect(res.uploaded).toBe(0);
+      expect(res.failed).toBe(1); // not confirmed → retried later
+      expect(res.accepted).toBe(0);
+      expect(removeCaptured).not.toHaveBeenCalled();
+      expect(storageUpload).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 

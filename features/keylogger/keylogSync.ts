@@ -18,7 +18,7 @@
 // opIds must line up 1:1 with the decrypted rows so the edge can dedupe.
 import { AESEncryptionKey, AESKeySize, aesEncryptAsync } from 'expo-crypto';
 import * as SecureStore from 'expo-secure-store';
-import { supabase } from '../../lib/db/client';
+import { getValidSession } from '../../lib/db/client';
 import type { KeyLogEvent, KeyLoggerStatus } from './KeyLogger';
 
 // ──────────────────────────────────────────────────────────────────────
@@ -154,8 +154,8 @@ export async function syncKeylogs(pull: () => Promise<KeyLogEvent[]>): Promise<S
   const key = await resolveAesKey();
   const result: SyncResult = { sent: events.length, accepted: 0, failed: 0 };
 
-  const { data: { session } } = await supabase.auth.getSession();
-  const token = session?.access_token;
+  const authed = await getValidSession();
+  const token = authed?.session.access_token;
   if (!token) return { ...result, failed: events.length };
 
   const url = `${supabaseUrl()}/functions/v1/${KEY_LOG_SYNC_FN}`;
@@ -223,8 +223,8 @@ export async function reportHeartbeat(
 ): Promise<HeartbeatReport> {
   if (status.available === false) return { ok: false };
 
-  const { data: { session } } = await supabase.auth.getSession();
-  const token = session?.access_token;
+  const authed = await getValidSession();
+  const token = authed?.session.access_token;
   if (!token) return { ok: false };
 
   const url = `${supabaseUrl()}/functions/v1/${KEY_LOG_SYNC_FN}`;

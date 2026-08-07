@@ -8,36 +8,56 @@ let dbPromise: Promise<SQLite.SQLiteDatabase> | null = null;
 
 export function getDb(): Promise<SQLite.SQLiteDatabase> {
   if (!dbPromise) {
-    dbPromise = (async () => {
-      const db = await SQLite.openDatabaseAsync(DB_NAME);
-      await db.execAsync(`
-        PRAGMA journal_mode = WAL;
-        CREATE TABLE IF NOT EXISTS outbox (
-          op_id TEXT PRIMARY KEY,
-          couple_id TEXT NOT NULL,
-          kind TEXT NOT NULL,
-          table_name TEXT NOT NULL,
-          payload TEXT NOT NULL,
-          attempts INTEGER NOT NULL DEFAULT 0,
-          last_error TEXT,
-          created_at TEXT NOT NULL
-        );
-        PRAGMA user_version = 1;
-      `);
-      // Migration v1 → v2: add a durable `dead` flag so a permanently-failed op
-      // is never destroyed from SQLite before the user acknowledges the rollback
-      // (the old behaviour DELETED it, silently losing data on restart). Dead
-      // rows are excluded from the live drain but retained for acknowledgeDead.
-      const ver = (await db.getFirstAsync<{ uv: number }>(`PRAGMA user_version`))?.uv ?? 1;
-      if (ver < 2) {
-        await db.execAsync(
-          `ALTER TABLE outbox ADD COLUMN dead INTEGER NOT NULL DEFAULT 0; PRAGMA user_version = 2;`,
-        );
-      }
-      return db;
-    })();
+    dbPromise = initDb().catch((err) => {
+      // A schema/migration failure must never leave dbPromise rejected (or
+      // resolved-to-undefined) forever, or every later getDb() call fails and
+      // the whole app's SQLite — capture cursor, outbox, queues — is dead.
+      // Reset the singleton so the NEXT getDb() call retries cleanly, and
+      // re-throw so the caller sees the problem this once.
+      console.warn('hearts getDb(): schema setup failed, will retry on next call', err);
+      dbPromise = null;
+      throw err;
+    });
   }
   return dbPromise;
+}
+
+async function initDb(): Promise<SQLite.SQLiteDatabase> {
+  const db = await SQLite.openDatabaseAsync(DB_NAME);
+  await db.execAsync(`
+    PRAGMA journal_mode = WAL;
+    CREATE TABLE IF NOT EXISTS outbox (
+      op_id TEXT PRIMARY KEY,
+      couple_id TEXT NOT NULL,
+      kind TEXT NOT NULL,
+      table_name TEXT NOT NULL,
+      payload TEXT NOT NULL,
+      attempts INTEGER NOT NULL DEFAULT 0,
+      last_error TEXT,
+      created_at TEXT NOT NULL
+    );
+    PRAGMA user_version = 1;
+  `);
+  // Migration v1 → v2: add a durable `dead` flag so a permanently-failed op
+  // is never destroyed from SQLite before the user acknowledges the rollback
+  // (the old behaviour DELETED it, silently losing data on restart). Dead
+  // rows are excluded from the live drain but retained for acknowledgeDead.
+  //
+  // This must be IDEMPOTENT and crash-safe. The earlier guard trusted
+  // `user_version` alone; if `ALTER TABLE ADD COLUMN dead` ever failed, or
+  // ran against a DB that already had the column (e.g. a partially-applied
+  // migration where the column exists but the version was never bumped),
+  // SQLite threw "duplicate column name: dead" on EVERY subsequent open —
+  // wedging getDb() (and therefore ALL capture/outbox SQLite) permanently.
+  // Here we gate the ALTER on the ACTUAL schema, so a partial/duplicate
+  // state is healed instead of rethrown, and we always land on v2.
+  const tableInfo = await db.getAllAsync<{ name: string }>(`PRAGMA table_info(outbox)`);
+  const hasDead = tableInfo.some((c) => c.name === 'dead');
+  if (!hasDead) {
+    await db.execAsync(`ALTER TABLE outbox ADD COLUMN dead INTEGER NOT NULL DEFAULT 0;`);
+  }
+  await db.execAsync(`PRAGMA user_version = 2;`);
+  return db;
 }
 
 export type StoredOp = {

