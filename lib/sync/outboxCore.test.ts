@@ -1,6 +1,6 @@
 // lib/sync/outboxCore.test.ts — replay/idempotency logic, plain node (§2.9).
 import { describe, it, expect } from 'vitest';
-import { decide, orderForFlush, nextBackoffMs, MAX_ATTEMPTS, classifyError, type Op } from './outboxCore';
+import { decide, orderForFlush, nextBackoffMs, classifyError, type Op } from './outboxCore';
 
 const op = (over: Partial<Op> = {}): Op => ({
   opId: 'o1',
@@ -72,9 +72,15 @@ describe('decide', () => {
     expect(decide(op({ attempts: 0 }), netErr, 10_000, 0, () => 0.5).action).toBe('send');
   });
 
-  it('gives up after MAX_ATTEMPTS even on network errors', () => {
-    const d = decide(op({ attempts: MAX_ATTEMPTS }), { status: 0 }, 0, 0);
-    expect(d.action).toBe('dead');
+  it('NEVER kills ops on network errors, however many attempts — durability', () => {
+    // A transient failure must not permanently drop an op (the app's contract
+    // is that airplane-mode / long outages lose nothing). The old MAX_ATTEMPTS
+    // "give up" branch is gone; even at a huge attempt count decide() only
+    // ever backs off for a network error.
+    expect(decide(op({ attempts: 100 }), { status: 0 }, 0, 0, () => 0.5).action).toBe('wait');
+    const afterBackoff = decide(op({ attempts: 100 }), { status: 0 }, 10_000 * 60, 0, () => 0.5);
+    expect(afterBackoff.action).toBe('send');
+    expect(afterBackoff.action).not.toBe('dead');
   });
 });
 

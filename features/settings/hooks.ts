@@ -20,9 +20,14 @@ import { withPref, hashPin, LOCKOUT_AFTER, LOCKOUT_COOLDOWN_MS, exportFileName, 
 import type { NotificationPrefsRow } from '../../lib/db/database.types';
 
 const PREFS_KEY = ['notification-prefs'] as const;
-const PIN_SALT_KEY = 'hearts.lock.salt';
-const PIN_HASH_KEY = 'hearts.lock.hash';
-const PIN_FAILS_KEY = 'hearts.lock.fails';
+
+/** Secret-store keys for the PIN lock. Shared with the app-scope bootstrap
+ *  (app/_layout.tsx) so a cold start can seed the lock before ANY tab renders —
+ *  the Settings-tab-only mounting of useAppLock must not be what decides whether
+ *  the app starts locked (that's the cold-start hole this fixes). */
+export const PIN_SALT_KEY = 'hearts.lock.salt';
+export const PIN_HASH_KEY = 'hearts.lock.hash';
+export const PIN_FAILS_KEY = 'hearts.lock.fails';
 
 export function usePrefs() {
   const userId = useSession((s) => s.userId);
@@ -120,8 +125,13 @@ export function useAppLock(): LockStatus {
       setConfigured(!!hash);
       setBiometricsAvailable(hasHardware && enrolled);
       setFails(Number(storedFails ?? 0));
-      // if a lock is configured, the app starts locked
-      if (hash) setLocked(true);
+      // NOTE: we intentionally do NOT `setLocked(true)` here when a hash exists.
+      // Seeding the locked state belongs to the app-scope bootstrap
+      // (app/_layout.tsx seedAppLock), which runs once at cold start on ANY tab.
+      // Doing it in this Settings-tab-only hook was the bug: it never ran on
+      // cold start (so the app launched unlocked with a PIN configured), and it
+      // locked the app out of the blue the first time the user opened Settings
+      // mid-session.
     })();
   }, [setLocked]);
 

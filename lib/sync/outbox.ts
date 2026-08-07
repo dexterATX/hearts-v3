@@ -8,14 +8,15 @@ import {
   insertOp,
   pendingOps,
   removeOp,
+  markDead,
   markAttempt,
   countPending,
+  deadOps,
   type StoredOp,
 } from './sqlite';
 import {
   decide,
   orderForFlush,
-  MAX_ATTEMPTS,
   classifyError,
   type Op,
   type OpKind,
@@ -50,12 +51,48 @@ async function emitStatus(): Promise<void> {
 export function subscribeOutbox(fn: StatusListener): () => void {
   listeners.add(fn);
   void emitStatus();
+  // Surface any dead ops persisted from a previous session, so a permanently-
+  // failed op is never silently dropped — the user can still acknowledge it.
+  void hydrateDeadOps();
   return () => listeners.delete(fn);
 }
 
-/** Drop a dead op after the UI has shown the rollback message. */
+/** Load dead ops persisted by a previous session into the in-memory surface so
+ *  the rollback UI remains able to acknowledge (and only then permanently drop)
+ *  them after a restart. Note: deadOps() is keyed by SQLite row state; we
+ *  dedupe against rows already surfaced this session. */
+async function hydrateDeadOps(): Promise<void> {
+  try {
+    const rows = await deadOps();
+    const existing = new Set(dead.map((d) => d.op.opId));
+    for (const r of rows) {
+      if (existing.has(r.op_id)) continue;
+      dead = [...dead, {
+        op: {
+          opId: r.op_id,
+          coupleId: r.couple_id,
+          kind: r.kind as OpKind,
+          table: r.table_name,
+          payload: JSON.parse(r.payload) as Record<string, unknown>,
+          attempts: r.attempts,
+          createdAt: r.created_at,
+        },
+        reason: r.last_error ?? 'permanent failure',
+      }];
+    }
+    if (dead.length > 0) void emitStatus();
+  } catch {
+    // non-fatal: hydration is best-effort
+  }
+}
+
+/** Drop a dead op after the UI has shown the rollback message and the user
+ *  consciously discards it. This is the ONLY operation that permanently removes
+ *  a dead op — the row is otherwise retained durably in SQLite so a restart or
+ *  an unacknowledged failure can never silently destroy queued data. */
 export function acknowledgeDead(opId: string): void {
   dead = dead.filter((d) => d.op.opId !== opId);
+  void removeOp(opId); // delete the persisted (dead) row — user confirmed discard
   void emitStatus();
 }
 
@@ -193,8 +230,11 @@ export async function flush(): Promise<void> {
         break; // strictly ordered — later ops wait behind the head
       }
       if (decision.action === 'dead') {
-        await removeOp(op.opId);
-        dead = [...dead, { op, reason: row.last_error ?? `failed after ${MAX_ATTEMPTS} tries` }];
+        // Permanent (4xx) failure. Persist the dead flag rather than deleting:
+        // the op survives restarts until the user acknowledges the rollback
+        // (acknowledgeDead). Nothing queued is ever silently destroyed.
+        await markDead(op.opId, parseStoredError(row.last_error) ?? { message: 'permanent failure' });
+        dead = [...dead, { op, reason: row.last_error ?? 'permanent failure' }];
         continue;
       }
       lastAttemptAt = Date.now();
@@ -204,8 +244,9 @@ export async function flush(): Promise<void> {
       } else {
         const status = result.status ?? 0;
         if (status >= 400 && status < 500) {
-          // permanent — dead immediately, no wasted extra write first
-          await removeOp(op.opId);
+          // permanent — dead immediately, no wasted extra write first. Persist
+          // (not delete) so the op is retained until the user acknowledges.
+          await markDead(op.opId, { status: result.status, code: result.code, message: result.message });
           dead = [...dead, { op, reason: result.message }];
         } else {
           await markAttempt(op.opId, op.attempts + 1, {

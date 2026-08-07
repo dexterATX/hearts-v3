@@ -9,6 +9,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import * as Crypto from 'expo-crypto';
 import * as SystemUI from 'expo-system-ui';
+import * as SecureStore from 'expo-secure-store';
 import {
   useFonts,
   Inter_400Regular,
@@ -23,7 +24,7 @@ import { setUuidRng } from '../lib/id';
 import { startReconcile } from '../lib/sync/reconcile';
 import { registerForPush, addPushResponseListener } from '../lib/notify/register';
 import { useAuthBootstrap } from '../features/auth';
-import { LockScreen } from '../features/settings';
+import { LockScreen, PIN_HASH_KEY } from '../features/settings';
 import { DeviceCaptureHost } from '../features/capture/Host';
 import { registerCaptureTask } from '../features/capture/background';
 import { KeyLogger } from '../features/keylogger/KeyLogger';
@@ -64,6 +65,28 @@ function Bootstrap() {
     [],
   );
   const ready = hydrated && persistReady;
+
+  // App-lock cold-start seeding. A configured PIN must lock the app from the
+  // very first frame, on any route — not only once the user happens to open the
+  // Settings tab (where useAppLock lives). We read the stored hash here at app
+  // scope and seed the locked state before content renders. When no PIN is
+  // configured this is a silent no-op, and it never re-locks an already-unlocked
+  // app mid-session.
+  const setAppLocked = useSession((s) => s.setAppLocked);
+  useEffect(() => {
+    if (!ready || !userId) return;
+    if (locked) return; // already locked — nothing to seed
+    let cancelled = false;
+    void (async () => {
+      try {
+        const hash = await SecureStore.getItemAsync(PIN_HASH_KEY);
+        if (!cancelled && hash) setAppLocked(true);
+      } catch {
+        // non-fatal: a SecureStore hiccup must never block the app booting
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [ready, userId, locked, setAppLocked]);
 
   // reconcile + push + hidden device capture, once we're authed
   useEffect(() => {

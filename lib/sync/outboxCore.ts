@@ -20,7 +20,10 @@ export function nextBackoffMs(attempts: number, jitter: () => number = Math.rand
   return Math.min(Math.round(base * (1 + jitter() * 0.5)), 30_000);
 }
 
-/** Give up after this many attempts — surfaces as a visible rollback (§2.3.6). */
+/** Legacy cap kept for compatibility, but NO LONGER a decision driver: a
+ *  transient (network) failure must never permanently drop an op — the app's
+ *  contractual guarantee is that airplane-mode/offline never loses data. Only
+ *  true 4xx (permanent) errors are ever "dead". */
 export const MAX_ATTEMPTS = 8;
 
 export type SendError = { status?: number; code?: string; message?: string };
@@ -52,7 +55,9 @@ export type FlushDecision =
 
 /**
  * Decide what to do with the head op. 4xx (validation/rls/conflict) is dead
- * immediately — retrying cannot help. Network errors back off until MAX.
+ * immediately — retrying cannot help. Network/transient errors NEVER go dead:
+ * they back off indefinitely (no attempt cap), because the app's durability
+ * contract is that a persistent outage must not silently discard queued data.
  */
 export function decide(
   op: Op,
@@ -64,7 +69,6 @@ export function decide(
   if (!lastError) return { action: 'send' };
   const status = lastError.status ?? 0;
   if (status >= 400 && status < 500) return { action: 'dead' };
-  if (op.attempts >= MAX_ATTEMPTS) return { action: 'dead' };
   const waitUntil = lastAttemptAt + nextBackoffMs(op.attempts, jitter);
   return now >= waitUntil
     ? { action: 'send' }
